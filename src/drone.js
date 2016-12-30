@@ -11,15 +11,15 @@ import Bullet from './bullet';
 export default class Drone {
     constructor(opts) {
         this.id;
-        this.speed = opts.speed ? opts.speed: 0.01;
-        this.direction = opts.direction ? opts.direction: 0.1;
+        this.speed = opts.speed ? opts.speed: 1;
+        this.direction = opts.direction ? opts.direction: 0;
         this.name = opts.name ? opts.name: this.randomName();
         this.life = Const.DroneParam.LIFE;
         this.bullets = [];
         this.firing = false;
         this.point = {
             type: 'Point',
-            coordinates: [121.211, 31.212]
+            coordinates: [100, 30]
         }
         this.bulletNum = 2;
     }
@@ -28,8 +28,8 @@ export default class Drone {
      * maintask start interval to update its status.
      */
     updateDrone () {
-        this.point.coordinates[0] += Math.sin(this.direction) * this.speed * 0.01;
-        this.point.coordinates[1] += Math.cos(this.direction) * this.speed * 0.01;
+        this.point.coordinates[0] += Math.sin(this.direction) * this.speed;
+        this.point.coordinates[1] += Math.cos(this.direction) * this.speed;
         // updateDroneView. toDO in maintask.js
     }
 
@@ -52,14 +52,14 @@ export default class Drone {
 
     accelerate() {
         if (this.speed < Const.DroneParam.MAXSPEED) {
-            this.speed += 0.1;
+            this.speed += 1;
             // this.updateDrone();
         }
     }
         
     brake () {
-        if (this.speed > 0.10001) {
-            this.speed -= 0.10001;
+        if (this.speed > 0) {
+            this.speed -= 1;
             // this.updateDrone();
         }
     }

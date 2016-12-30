@@ -23,7 +23,7 @@
     "server": "http-server",    
     "build": "babel src -d lib",
     "s": "npm run build && npm run server",
-    "w": "webpack && npm run server"
+    "wp": "webpack && npm run server"
   },
   "keywords": [
     "lowpoly",
