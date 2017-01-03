@@ -1,6 +1,7 @@
 
 import Const from './const';
 import Bullet from './bullet';
+import { readonly, log } from './util';
 
 // // Drone model script
 // const firingTime = 1200, MAXSPEED = 3.900;
@@ -13,6 +14,7 @@ export default class Drone {
         this.id;
         this.speed = opts.speed ? opts.speed: 1;
         this.direction = opts.direction ? opts.direction: 0;
+        
         this.name = opts.name ? opts.name: this.randomName();
         this.life = Const.DroneParam.LIFE;
         this.bullets = [];
@@ -33,6 +35,7 @@ export default class Drone {
         // updateDroneView. toDO in maintask.js
     }
 
+    // @log
     randomName () {
         let randomNum = Math.random() * 10000;
         return "Player ".concat(randomNum.toFixed(0));

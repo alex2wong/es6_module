@@ -1,4 +1,5 @@
 import Drone from './drone';
+import { deprecate } from 'core-decorators';
 
 export default class controllers {
     /**
@@ -33,8 +34,29 @@ export default class controllers {
     /**
      * Calculate bullets location based on drones.
      */
-    static bulletCalculater(drones) {
-        
+    static bulletCalculator(drones) {
+        if (Array.isArray(drones)) {
+            for(let i = 0;i < drones.length; i ++) {
+                let curDrone = drone[i];
+                let curBullets = curDrone.bullets;
+                // Calculate bullets coords
+                if (curDrone.firing && curBullets) {
+
+                } else {
+                    
+                }
+            }
+        }
+    }
+
+    
+    /**
+     * Add AI robots shooting at player..
+     * @input num: number. how many robots to create. 
+     */
+    static addRobots(num) {
+        let robot = new Drone({});
+        return robot;
     }
 
 
@@ -42,6 +64,7 @@ export default class controllers {
      * Dashboard bind with a drone instance and div element... 
      * After start this controller, use WSAD to move drone.
      */
+    // @deprecate
     static dashBoard(drone, ele) {
         if ((drone instanceof Drone) !== true ) {
             console.error("dashBoard must bind with a drone instance.");

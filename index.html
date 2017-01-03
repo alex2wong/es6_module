@@ -63,11 +63,26 @@
 			'rotate': drone.direction,
 			'name': drone.name,
 		});		
-	}, 100);
+	}, 40);
 
 	// register game controller bind with drone
 	Alex.Controllers.gameControl(drone);
 	Alex.Controllers.dashBoard(drone, board);
+
+	Alex.Util.getJSON("./package.json").then( data => {
+		console.log("got data: " + data)
+	}).catch( err => {
+		console.error(err);
+	})
+
+	/**
+     * getJSON("somedata.json").then((data) => {
+     *      console.log("got data: " + data);
+     * })
+     * .catch((err) => {
+     *      console.error("encounter error..");
+     * })
+     */
 
 </script>
 

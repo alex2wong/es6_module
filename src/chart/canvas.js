@@ -76,7 +76,7 @@ export default class Canvas {
             if (typeof rotate == 'number') {
                 let tmp = rotate%(Math.PI*2) - Math.PI/2;
                 Canvas.ctx.arc(parseInt(coords[0]), parseInt(y), radius + 2, tmp-Math.PI/4, tmp+Math.PI/4);
-                console.log("rendering drone..with rotate:" + tmp);
+                // console.log("rendering drone..with rotate:" + tmp);
             }
 
             if (text) Canvas.ctx.fillText(text, coords[0], parseInt(y)-4); 
