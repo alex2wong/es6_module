@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title> test LowpPo</title>
+</head>
+<style type="text/css">
+	.lowPoly {
+		height: 300px;
+		width: auto;
+		border: 2px solid black;
+	}
+
+	#canv {
+		height: 400px;
+		width: 800px;
+		border: 2px dotted gray;
+	}
+</style>
+<body>
+	<!--<img src="RealShadow_flight.png" class="lowPoly">-->
+	<!--<img src="" id="lpImg">-->
+	<h3> ES6 Drone Module Example </h3>
+	<canvas id="canv"></canvas>
+	<canvas id="avator"></canvas>
+	<div id="board"></div>
+</body>
+<!-- 1. Load libraries -->
+     <!-- Polyfill(s) for older browsers -->
+<script src="node_modules/core-js/client/shim.min.js"></script>
+<script src="node_modules/zone.js/dist/zone.js"></script>
+<script src="node_modules/reflect-metadata/Reflect.js"></script>
+<script src="node_modules/systemjs/dist/system.src.js"></script>
+
+<!-- load App with SystemJS -->
+<!--<script src="systemjs.config.js"></script>
+<script>
+      System.import('app').catch(function(err){ console.error(err); });
+    </script>-->
+
+<!--load App with webpacked bundle.js-->
+<script src="dist/bundle.js"></script>
+<script>
+	var img = new Image();
+	// load img async..
+	img.src = './drone.png';
+	document.querySelector("#avator").getContext("2d").drawImage(img, 0,0,44,44);
+
+	var drone = new Alex.Drone({});	
+	var canv = document.querySelector("#canv");
+	var board = document.querySelector("#board");
+	canv.getContext('2d').translate(0.5, 0.5);
+	Alex.Canvas.init(canv);
+
+	var dronelayer = new Alex.Chart({
+		ele: canv,
+		data: drone.point.coordinates,
+		// url: './drone.png'
+	});
+	setInterval(function(){
+		drone.updateDrone();
+		dronelayer.setData({
+			'coords': drone.point.coordinates,
+			'rotate': drone.direction,
+			'name': drone.name,
+		});		
+	}, 40);
+
+	// register game controller bind with drone
+	Alex.Controllers.gameControl(drone);
+	Alex.Controllers.dashBoard(drone, board);
+
+	Alex.Util.getJSON("./package.json").then( data => {
+		console.log("got data: " + data)
+	}).catch( err => {
+		console.error(err);
+	})
+
+	/**
+     * getJSON("somedata.json").then((data) => {
+     *      console.log("got data: " + data);
+     * })
+     * .catch((err) => {
+     *      console.error("encounter error..");
+     * })
+     */
+
+</script>
+
+<!--<script>
+	// 方便调试。。应用层面的代码不放到 bundle 中
+	var canv = document.querySelector("#canv");
+	// canv.getContext('2d').translate(0.5, 0.5);
+	Alex.Canvas.init(canv);
+	Alex.Canvas.setWidth(2);
+	Alex.Canvas.setStroke('rgba(255,0,0,0.6)');
+	var data = [100,40,140,30,80,120,40,55,122,14,90,11,11,23];
+	var ldata = null, sinline = null;
+	var timer = 50; // start with X = 50 pixel.
+
+	var dronelayer = new Alex.Chart({
+		ele: canv,
+		data: data,
+		// url: './drone.png'
+	});
+
+	setInterval(function(){
+		data.shift();
+		data.push(Math.random()*150);
+		
+		ldata = statMean(data);		
+		// Alex.Canvas.drawBars(data);  // timer/1.20
+		Alex.Canvas.clearCanv();
+
+		sinline = dronelayer.generateSinLine('cos', timer, 20.0, timer/1.20);		
+		Alex.Canvas.drawLine(sinline, null, null, 1);
+		Alex.Canvas.drawPoint(sinline[sinline.length-1], 2);
+		// Alex.Canvas.drawLine(ldata);
+		Alex.Canvas.drawLine([[0, 50], [1000, 50]]);
+		timer++;
+	}, 20);
+	
+	function statMean(data) {
+		var mean = 0, ldata = [];
+		data.forEach(function(val){
+			mean += val;
+		});
+		mean = mean/data.length;
+		ldata[0] = [0, mean];
+		ldata[1] = [canv.width, mean];
+		return ldata;
+	}
+
+</script>-->
+</html>
