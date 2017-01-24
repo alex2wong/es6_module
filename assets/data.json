@@ -1,0 +1,48 @@
+[{
+      "name":"STORY",
+      "active":false,
+      "tasks":[
+        {
+          "name":"欢迎使用基于Angular-cli 搭建的WorkTile任务管理平台",
+          "done":true
+        },
+        {
+          "name":"仿制Worktile 敏捷开发面板",
+          "done":true
+        },
+        {
+          "name":"自定义样式"
+        }
+      ]
+    },
+    {
+      "name":"TO-DO",
+      "active":false,
+      "tasks":[
+        {
+          "name":"支持后台RESTFUL API，支持导出统计报表，长期计划"
+        },
+        {
+          "name":"支持拖拽任务到不同的面板（TO-DO）"
+        }
+      ]
+    },
+    {
+      "name":"PROGRESS",
+      "active":false,
+      "tasks":[]
+    },
+    {
+      "name":"DONE !",
+      "active":false,
+      "tasks":[
+        {
+          "name":"支持多种键盘事件，新建任务Enter 提交，Escape 取消",
+          "done":true
+        },
+        {
+          "name":"数据存取基于前端 JSON 文件，基于angular service 缓存数据",
+          "done":true
+        }
+      ]
+    }]
