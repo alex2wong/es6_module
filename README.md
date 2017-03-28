@@ -8,7 +8,7 @@
 4. 用http-server 这样的静态文件服务器或者 python 自带的server跑起来
 5. 打开127.0.0.1:8080或者你指定的端口，看看Drone模块和 LowPoly模块效果
 
-## 附件（基于angular-cli 两天的开发结果）
+## 附件（基于angular-cli Worktile仿制版）
 本仓库挂载了不断更新的 WorkTile 仿制版本. **基于Angular2.x** 和自制样式。
 访问在线版 [DEMO](http://123.206.201.245:3000/)，主要技术点：
 
@@ -16,6 +16,7 @@
 - 模板和组件的编写，单页面程序的模块化开发
 - 单页面程序的router 基本使用
 - 基于angular service 的前端数据缓存
+- 基于Flex的自适应页面布局
 
 ### ES6转码打包
 
