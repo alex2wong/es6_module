@@ -1,0 +1,38 @@
+<!DOCTYPE>
+<html>
+    <head>
+      <meta charset="utf-8">
+      <title>large select demo</title>
+      <meta name="viewport" content="width=device-width, initial-scale=1">
+      <link href='lgselect.css' rel='stylesheet' />
+      <script src="../../dist/bundle.js"></script>
+    </head>
+    <body>
+        <div onClick="hideDropdown()">
+        <input aModel="filterStr" placeholder="keyword to search" onBlur="searchAO()">
+        <div class="dropdown-container">
+            <!--click dropdown to toggle the dropdown-menu display-->
+            <a href="javascript:void(0)" aModel="select.name" class="lg-select" data-toggle="dropdown" onClick="toggleDropdown()">
+                <span class="caret"></span>
+            </a>
+            <ul class="dropdown-menu" onScroll="scrollListener()">
+                <!--<li *ngIf="filteredAddrObjs.length==0">No addrobj</li>-->
+                <li onClick="selectAO(this)">
+                        <span> item name </span>
+                    </li> 
+                </ul>
+            <div>
+        </div>        
+        <script>
+         if (Alex.lgSelect) {
+             var select = new Alex.lgSelect({
+                options: [{'name': 'test11'}, {'name': 'test22'}],
+                title: "Select AddrObjs",
+            });
+         } else {
+             console.error("lgSelect component not exist.");
+         }         
+        </script>
+       
+    </body>
+</html>
