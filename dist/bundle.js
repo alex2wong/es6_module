@@ -66,38 +66,653 @@ return /******/ (function(modules) { // webpackBootstrap
 	Object.defineProperty(exports, "__esModule", {
 	    value: true
 	});
-	exports.Util = exports.Controllers = exports.Drone = exports.Canvas = exports.Chart = undefined;
+	exports.lgSelect = exports.LowPoly = exports.Drone = undefined;
 
-	var _drone = __webpack_require__(2);
+	var _lowpoly = __webpack_require__(2);
+
+	var _lowpoly2 = _interopRequireDefault(_lowpoly);
+
+	var _drone = __webpack_require__(4);
 
 	var _drone2 = _interopRequireDefault(_drone);
 
-	var _canvas = __webpack_require__(6);
+	var _lgselect = __webpack_require__(8);
 
-	var _canvas2 = _interopRequireDefault(_canvas);
-
-	var _chartmodel = __webpack_require__(7);
-
-	var _chartmodel2 = _interopRequireDefault(_chartmodel);
-
-	var _controller = __webpack_require__(8);
-
-	var _controller2 = _interopRequireDefault(_controller);
-
-	var _util = __webpack_require__(5);
-
-	var _util2 = _interopRequireDefault(_util);
+	var _lgselect2 = _interopRequireDefault(_lgselect);
 
 	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
-	exports.Chart = _chartmodel2.default;
-	exports.Canvas = _canvas2.default;
+	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } } // this is Root Module for Whole app, require lib we need.
+
+	// import * as Dashboard from 'dashboard';
+
+
+	var RootApp = function RootApp() {
+	    _classCallCheck(this, RootApp);
+	};
+
+	// Static Props..
+
+
+	RootApp.Drone = _drone2.default;
+	RootApp.LowPoly = _lowpoly2.default;
+	RootApp.lgSelect = _lgselect2.default;
+
 	exports.Drone = _drone2.default;
-	exports.Controllers = _controller2.default;
-	exports.Util = _util2.default;
+	exports.LowPoly = _lowpoly2.default;
+	exports.lgSelect = _lgselect2.default;
 
 /***/ },
 /* 2 */
+/***/ function(module, exports, __webpack_require__) {
+
+	var __WEBPACK_AMD_DEFINE_RESULT__;/* WEBPACK VAR INJECTION */(function(module) {'use strict';
+
+	var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
+
+	var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+	/**
+	 * Author: Jrain Lau
+	 * E-mail: jrainlau@163.com
+	 * Version: 0.1.0
+	 */
+	{
+	  (function () {
+	    'use strict';
+
+	    var sourceLoadComplete = Symbol('sourceLoadComplete');
+	    var setSource = Symbol('setSource');
+	    var generate = Symbol('generate');
+	    var getEdgePoint = Symbol('getEdgePoint');
+	    var grayscaleFilterR = Symbol('grayscaleFilterR');
+	    var convolutionFilterR = Symbol('convolutionFilterR');
+
+	    var image = void 0,
+	        source = void 0,
+	        canvas = void 0,
+	        context = void 0,
+	        generating = true,
+	        timeoutId = null;
+
+	    var generateTime = 0;
+
+	    /**
+	     * Delaunay
+	     * fork from https://github.com/timbennett/delaunay
+	     */
+	    var Delaunay = function () {
+	      /**
+	       * Node
+	       *
+	       * @param {Number} x
+	       * @param {Number} y
+	       * @param {Number} id
+	       */
+	      function Node(x, y, id) {
+	        this.x = x;
+	        this.y = y;
+	        this.id = !isNaN(id) && isFinite(id) ? id : null;
+	      }
+
+	      Node.prototype = {
+	        eq: function eq(p) {
+	          var dx = this.x - p.x;
+	          var dy = this.y - p.y;
+	          return (dx < 0 ? -dx : dx) < 0.0001 && (dy < 0 ? -dy : dy) < 0.0001;
+	        },
+
+	        toString: function toString() {
+	          return '(x: ' + this.x + ', y: ' + this.y + ')';
+	        }
+	      };
+
+	      /**
+	       * Edge
+	       *
+	       * @param {Node} p0
+	       * @param {Node} p1
+	       */
+	      function Edge(p0, p1) {
+	        this.nodes = [p0, p1];
+	      }
+
+	      Edge.prototype = {
+	        eq: function eq(edge) {
+	          var na = this.nodes,
+	              nb = edge.nodes;
+	          var na0 = na[0],
+	              na1 = na[1],
+	              nb0 = nb[0],
+	              nb1 = nb[1];
+	          return na0.eq(nb0) && na1.eq(nb1) || na0.eq(nb1) && na1.eq(nb0);
+	        }
+	      };
+
+	      /**
+	       * Triangle
+	       *
+	       * @param {Node} p0
+	       * @param {Node} p1
+	       * @param {Node} p2
+	       */
+	      function Triangle(p0, p1, p2) {
+	        this.nodes = [p0, p1, p2];
+	        this.edges = [new Edge(p0, p1), new Edge(p1, p2), new Edge(p2, p0)];
+
+	        // 今回は id は使用しない
+	        this.id = null;
+
+	        // この三角形の外接円を作成する
+
+	        var circle = this.circle = new Object();
+
+	        var ax = p1.x - p0.x,
+	            ay = p1.y - p0.y,
+	            bx = p2.x - p0.x,
+	            by = p2.y - p0.y,
+	            t = p1.x * p1.x - p0.x * p0.x + p1.y * p1.y - p0.y * p0.y,
+	            u = p2.x * p2.x - p0.x * p0.x + p2.y * p2.y - p0.y * p0.y;
+
+	        var s = 1 / (2 * (ax * by - ay * bx));
+
+	        circle.x = ((p2.y - p0.y) * t + (p0.y - p1.y) * u) * s;
+	        circle.y = ((p0.x - p2.x) * t + (p1.x - p0.x) * u) * s;
+
+	        var dx = p0.x - circle.x;
+	        var dy = p0.y - circle.y;
+	        circle.radiusSq = dx * dx + dy * dy;
+	      }
+
+	      /**
+	       * Delaunay
+	       *
+	       * @param {Number} width
+	       * @param {Number} height
+	       */
+	      function Delaunay(width, height) {
+	        this.width = width;
+	        this.height = height;
+
+	        this._triangles = null;
+
+	        this.clear();
+	      }
+
+	      Delaunay.prototype = {
+	        clear: function clear() {
+	          var p0 = new Node(0, 0);
+	          var p1 = new Node(this.width, 0);
+	          var p2 = new Node(this.width, this.height);
+	          var p3 = new Node(0, this.height);
+
+	          this._triangles = [new Triangle(p0, p1, p2), new Triangle(p0, p2, p3)];
+
+	          return this;
+	        },
+
+	        insert: function insert(points) {
+	          var k = void 0,
+	              klen = void 0,
+	              i = void 0,
+	              ilen = void 0,
+	              j = void 0,
+	              jlen = void 0;
+	          var triangles = void 0,
+	              t = void 0,
+	              temps = void 0,
+	              edges = void 0,
+	              edge = void 0,
+	              polygon = void 0;
+	          var x = void 0,
+	              y = void 0,
+	              circle = void 0,
+	              dx = void 0,
+	              dy = void 0,
+	              distSq = void 0;
+
+	          for (k = 0, klen = points.length; k < klen; k++) {
+	            x = points[k][0];
+	            y = points[k][1];
+
+	            triangles = this._triangles;
+	            temps = [];
+	            edges = [];
+
+	            for (ilen = triangles.length, i = 0; i < ilen; i++) {
+	              t = triangles[i];
+
+	              // 座標が三角形の外接円に含まれるか調べる
+	              circle = t.circle;
+	              dx = circle.x - x;
+	              dy = circle.y - y;
+	              distSq = dx * dx + dy * dy;
+
+	              if (distSq < circle.radiusSq) {
+	                // 含まれる場合三角形の辺を保存
+	                edges.push(t.edges[0], t.edges[1], t.edges[2]);
+	              } else {
+	                // 含まれない場合は持ち越し
+	                temps.push(t);
+	              }
+	            }
+
+	            polygon = [];
+
+	            // 辺の重複をチェック, 重複する場合は削除する
+	            edgesLoop: for (ilen = edges.length, i = 0; i < ilen; i++) {
+	              edge = edges[i];
+
+	              // 辺を比較して重複していれば削除
+	              for (jlen = polygon.length, j = 0; j < jlen; j++) {
+	                if (edge.eq(polygon[j])) {
+	                  polygon.splice(j, 1);
+	                  continue edgesLoop;
+	                }
+	              }
+
+	              polygon.push(edge);
+	            }
+
+	            for (ilen = polygon.length, i = 0; i < ilen; i++) {
+	              edge = polygon[i];
+	              temps.push(new Triangle(edge.nodes[0], edge.nodes[1], new Node(x, y)));
+	            }
+
+	            this._triangles = temps;
+	          }
+
+	          return this;
+	        },
+
+	        getTriangles: function getTriangles() {
+	          return this._triangles.slice();
+	        }
+	      };
+
+	      Delaunay.Node = Node;
+
+	      return Delaunay;
+	    }();
+
+	    /**
+	     * LowPoly
+	     *
+	     * Put in an image and return a low-poly style one.
+	     *
+	     * @param    {String}  src     address of an original image
+	     * @param    {Objext}  config  configaration
+	     *
+	     */
+
+	    var LowPoly = function () {
+	      function LowPoly(src, _ref) {
+	        var EDGE_DETECT_VALUE = _ref.EDGE_DETECT_VALUE,
+	            POINT_RATE = _ref.POINT_RATE,
+	            POINT_MAX_NUM = _ref.POINT_MAX_NUM,
+	            BLUR_SIZE = _ref.BLUR_SIZE,
+	            EDGE_SIZE = _ref.EDGE_SIZE,
+	            PIXEL_LIMIT = _ref.PIXEL_LIMIT;
+
+	        _classCallCheck(this, LowPoly);
+
+	        this.src = src;
+	        this.EDGE_DETECT_VALUE = EDGE_DETECT_VALUE || 80;
+	        this.POINT_RATE = POINT_RATE || 0.075;
+	        this.POINT_MAX_NUM = POINT_MAX_NUM || 3500;
+	        this.BLUR_SIZE = BLUR_SIZE || 2;
+	        this.EDGE_SIZE = EDGE_SIZE || 6;
+	        this.PIXEL_LIMIT = PIXEL_LIMIT || 350000;
+
+	        this.blur = function (size) {
+	          var matrix = [];
+	          var side = size * 2 + 1;
+	          var i = void 0,
+	              len = side * side;
+	          for (i = 0; i < len; i++) {
+	            matrix[i] = 1;
+	          }return matrix;
+	        }(this.BLUR_SIZE);
+
+	        this.edge = function (size) {
+	          var matrix = [];
+	          var side = size * 2 + 1;
+	          var i = void 0,
+	              len = side * side;
+	          var center = len * 0.5 | 0;
+	          for (i = 0; i < len; i++) {
+	            matrix[i] = i === center ? -len + 1 : 1;
+	          }return matrix;
+	        }(this.EDGE_SIZE);
+	      }
+
+	      /**
+	       * init
+	       *
+	       * translate an image into low-poly style
+	       *
+	       * returns    {Promise}  a promise contains the low-poly image base64 url
+	       *
+	       */
+
+
+	      _createClass(LowPoly, [{
+	        key: 'init',
+	        value: function init() {
+	          var self = this;
+	          canvas = document.createElement('canvas');
+	          context = canvas.getContext('2d');
+	          source = new Image();
+	          this[setSource](this.src);
+	          return new Promise(function (res, rej) {
+	            source.addEventListener('load', function () {
+	              self[sourceLoadComplete]().then(function (data) {
+	                res(data);
+	              });
+	            }, false);
+	          });
+	        }
+	      }, {
+	        key: sourceLoadComplete,
+	        value: function value(e) {
+	          var self = this;
+	          var width = source.width;
+	          var height = source.height;
+	          var pixelNum = width * height;
+	          if (pixelNum > this.PIXEL_LIMIT) {
+	            var scale = Math.sqrt(this.PIXEL_LIMIT / pixelNum);
+	            source.width = width * scale | 0;
+	            source.height = height * scale | 0;
+
+	            console.log('Source resizing ' + width + 'px x ' + height + 'px' + ' -> ' + source.width + 'px x ' + source.height + 'px');
+	          }
+
+	          if (timeoutId) clearTimeout(timeoutId);
+	          generateTime = new Date().getTime();
+	          console.log('Generate start...');
+	          return new Promise(function (res, rej) {
+	            timeoutId = setTimeout(function () {
+	              self[generate]().then(function (data) {
+	                res(data);
+	              });
+	            }, 0);
+	          });
+	        }
+	      }, {
+	        key: setSource,
+	        value: function value(src) {
+	          generating = true;
+	          if (source.src !== src) {
+	            source.removeAttribute('width');
+	            source.removeAttribute('height');
+	            source.src = src;
+	          } else {
+	            this[sourceLoadComplete](null);
+	          }
+	        }
+	      }, {
+	        key: generate,
+	        value: function value() {
+	          var width = canvas.width = source.width;
+	          var height = canvas.height = source.height;
+
+	          context.drawImage(source, 0, 0, width, height);
+
+	          var imageData = context.getImageData(0, 0, width, height);
+	          var colorData = context.getImageData(0, 0, width, height).data;
+
+	          this[grayscaleFilterR](imageData);
+	          this[convolutionFilterR](this.blur, imageData, this.blur.length);
+	          this[convolutionFilterR](this.edge, imageData);
+
+	          var temp = this[getEdgePoint](imageData);
+	          var detectionNum = temp.length;
+
+	          var points = [];
+	          var i = 0,
+	              ilen = temp.length;
+	          var tlen = ilen;
+	          var j = void 0,
+	              limit = Math.round(ilen * this.POINT_RATE);
+	          if (limit > this.POINT_MAX_NUM) {
+	            limit = this.POINT_MAX_NUM;
+	          }
+
+	          while (i < limit && i < ilen) {
+	            j = tlen * Math.random() | 0;
+	            points.push(temp[j]);
+	            temp.splice(j, 1);
+	            tlen--;
+	            i++;
+	          }
+
+	          var delaunay = new Delaunay(width, height);
+	          var triangles = delaunay.insert(points).getTriangles();
+
+	          var t = void 0,
+	              p0 = void 0,
+	              p1 = void 0,
+	              p2 = void 0,
+	              cx = void 0,
+	              cy = void 0;
+
+	          for (ilen = triangles.length, i = 0; i < ilen; i++) {
+	            t = triangles[i];
+	            p0 = t.nodes[0];p1 = t.nodes[1];p2 = t.nodes[2];
+
+	            context.beginPath();
+	            context.moveTo(p0.x, p0.y);
+	            context.lineTo(p1.x, p1.y);
+	            context.lineTo(p2.x, p2.y);
+	            context.lineTo(p0.x, p0.y);
+
+	            cx = (p0.x + p1.x + p2.x) * 0.33333;
+	            cy = (p0.y + p1.y + p2.y) * 0.33333;
+
+	            j = (cx | 0) + (cy | 0) * width << 2;
+
+	            context.fillStyle = 'rgb(' + colorData[j] + ', ' + colorData[j + 1] + ', ' + colorData[j + 2] + ')';
+	            context.fill();
+	          }
+
+	          var dataUrl = canvas.toDataURL('image/png');
+
+	          generateTime = new Date().getTime() - generateTime;
+	          console.log('Generate completed ' + generateTime + 'ms, ' + points.length + ' points (out of ' + detectionNum + ' points, ' + (points.length / detectionNum * 100).toFixed(2) + ' %), ' + triangles.length + ' triangles');
+
+	          generating = false;
+
+	          return new Promise(function (res, rej) {
+	            res(dataUrl);
+	          });
+	        }
+	      }, {
+	        key: getEdgePoint,
+	        value: function value(imageData) {
+	          var width = imageData.width;
+	          var height = imageData.height;
+	          var data = imageData.data;
+
+	          var E = this.EDGE_DETECT_VALUE;
+
+	          var points = [];
+	          var x = void 0,
+	              y = void 0,
+	              row = void 0,
+	              col = void 0,
+	              sx = void 0,
+	              sy = void 0,
+	              step = void 0,
+	              sum = void 0,
+	              total = void 0;
+
+	          for (y = 0; y < height; y++) {
+	            for (x = 0; x < width; x++) {
+	              sum = total = 0;
+
+	              for (row = -1; row <= 1; row++) {
+	                sy = y + row;
+	                step = sy * width;
+	                if (sy >= 0 && sy < height) {
+	                  for (col = -1; col <= 1; col++) {
+	                    sx = x + col;
+
+	                    if (sx >= 0 && sx < width) {
+	                      sum += data[sx + step << 2];
+	                      total++;
+	                    }
+	                  }
+	                }
+	              }
+
+	              if (total) sum /= total;
+	              if (sum > E) points.push(new Array(x, y));
+	            }
+	          }
+
+	          return points;
+	        }
+	      }, {
+	        key: grayscaleFilterR,
+	        value: function value(imageData) {
+	          var width = imageData.width | 0;
+	          var height = imageData.height | 0;
+	          var data = imageData.data;
+
+	          var x = void 0,
+	              y = void 0;
+	          var i = void 0,
+	              step = void 0;
+	          var r = void 0,
+	              g = void 0,
+	              b = void 0;
+
+	          for (y = 0; y < height; y++) {
+	            step = y * width;
+
+	            for (x = 0; x < width; x++) {
+	              i = x + step << 2;
+	              r = data[i];
+	              g = data[i + 1];
+	              b = data[i + 2];
+
+	              data[i] = Math.max(r, g, b) + Math.min(r, g, b) >> 2;
+	            }
+	          }
+
+	          return imageData;
+	        }
+	      }, {
+	        key: convolutionFilterR,
+	        value: function value(matrix, imageData, divisor) {
+	          matrix = matrix.slice();
+	          divisor = divisor || 1;
+
+	          var divscalar = divisor ? 1 / divisor : 0;
+	          var k = void 0,
+	              len = void 0;
+	          if (divscalar !== 1) {
+	            for (k = 0, len = matrix.length; k < matrix.length; k++) {
+	              matrix[k] *= divscalar;
+	            }
+	          }
+
+	          var data = imageData.data;
+
+	          len = data.length >> 2;
+	          var copy = new Uint8Array(len);
+	          for (var _i = 0; _i < len; _i++) {
+	            copy[_i] = data[_i << 2];
+	          }var width = imageData.width | 0;
+	          var height = imageData.height | 0;
+	          var size = Math.sqrt(matrix.length);
+	          var range = size * 0.5 | 0;
+
+	          var x = void 0,
+	              y = void 0;
+	          var r = void 0,
+	              g = void 0,
+	              b = void 0,
+	              v = void 0;
+	          var col = void 0,
+	              row = void 0,
+	              sx = void 0,
+	              sy = void 0;
+	          var i = void 0,
+	              istep = void 0,
+	              jstep = void 0,
+	              kstep = void 0;
+
+	          for (y = 0; y < height; y++) {
+	            istep = y * width;
+
+	            for (x = 0; x < width; x++) {
+	              r = g = b = 0;
+
+	              for (row = -range; row <= range; row++) {
+	                sy = y + row;
+	                jstep = sy * width;
+	                kstep = (row + range) * size;
+
+	                if (sy >= 0 && sy < height) {
+	                  for (col = -range; col <= range; col++) {
+	                    sx = x + col;
+
+	                    if (sx >= 0 && sx < width && (v = matrix[col + range + kstep])) {
+	                      r += copy[sx + jstep] * v;
+	                    }
+	                  }
+	                }
+	              }
+
+	              if (r < 0) r = 0;else if (r > 255) r = 255;
+
+	              data[x + istep << 2] = r & 0xFF;
+	            }
+	          }
+	          return imageData;
+	        }
+	      }]);
+
+	      return LowPoly;
+	    }();
+
+	    if (( false ? 'undefined' : _typeof(module)) === 'object' && _typeof(module.exports) === 'object') {
+	      // CommonJS
+	      module.exports = exports = LowPoly;
+	    } else if (true) {
+	      // AMD support
+	      !(__WEBPACK_AMD_DEFINE_RESULT__ = function () {
+	        return LowPoly;
+	      }.call(exports, __webpack_require__, exports, module), __WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
+	    } else if ((typeof window === 'undefined' ? 'undefined' : _typeof(window)) === 'object') {
+	      // Normal way
+	      window.LowPoly = LowPoly;
+	    }
+	  })();
+	}
+	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(3)(module)))
+
+/***/ },
+/* 3 */
+/***/ function(module, exports) {
+
+	module.exports = function(module) {
+		if(!module.webpackPolyfill) {
+			module.deprecate = function() {};
+			module.paths = [];
+			// module.parent = undefined by default
+			module.children = [];
+			module.webpackPolyfill = 1;
+		}
+		return module;
+	}
+
+
+/***/ },
+/* 4 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
@@ -108,15 +723,15 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
-	var _const = __webpack_require__(3);
+	var _const = __webpack_require__(5);
 
 	var _const2 = _interopRequireDefault(_const);
 
-	var _bullet = __webpack_require__(4);
+	var _bullet = __webpack_require__(6);
 
 	var _bullet2 = _interopRequireDefault(_bullet);
 
-	var _util = __webpack_require__(5);
+	var _util = __webpack_require__(7);
 
 	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
@@ -237,7 +852,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	exports.default = Drone;
 
 /***/ },
-/* 3 */
+/* 5 */
 /***/ function(module, exports) {
 
 	"use strict";
@@ -265,7 +880,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	};
 
 /***/ },
-/* 4 */
+/* 6 */
 /***/ function(module, exports) {
 
 	'use strict';
@@ -298,7 +913,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	exports.default = Bullet;
 
 /***/ },
-/* 5 */
+/* 7 */
 /***/ function(module, exports) {
 
 	"use strict";
@@ -430,398 +1045,10 @@ return /******/ (function(modules) { // webpackBootstrap
 	exports.default = util;
 
 /***/ },
-/* 6 */
-/***/ function(module, exports) {
-
-	"use strict";
-
-	Object.defineProperty(exports, "__esModule", {
-	    value: true
-	});
-
-	var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
-
-	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
-	// Some Static Function bind with one Canvas context
-	var Canvas = function () {
-	    function Canvas() {
-	        _classCallCheck(this, Canvas);
-	    }
-
-	    _createClass(Canvas, null, [{
-	        key: "init",
-
-	        // Bound with a canvas element.
-	        value: function init(ele) {
-	            Canvas.canv = ele;
-	            Canvas.height = ele.height;
-	            Canvas.width = ele.width;
-	            // let the canvas's width/height cohere width DOM width/height. 
-	            Canvas.canv.width = ele.width;
-	            Canvas.canv.height = ele.height;
-	            Canvas.ctx = ele.getContext("2d");
-	            Canvas.ctx.strokeStyle = "rgba(0,0,0,0.9)";
-	            Canvas.ctx.fillStyle = "rgba(10,200,240,0.4)";
-	            Canvas.ctx.strokeWidth = 2;
-	            Canvas.animate = false;
-	            Canvas.img = new Image();
-	        }
-
-	        /**
-	         * set ctx.strokeStyle with rgba() @string
-	         */
-
-	    }, {
-	        key: "setStroke",
-	        value: function setStroke(colorStr) {
-	            Canvas.ctx.strokeStyle = colorStr;
-	        }
-
-	        /**
-	         * set ctx.fillStyle with rgba(). @string
-	         */
-
-	    }, {
-	        key: "setFill",
-	        value: function setFill(colorStr) {
-	            Canvas.ctx.fillStyle = colorStr;
-	        }
-
-	        /**
-	         * set ctx.strokeWidth and lineWidth. @number
-	         */
-
-	    }, {
-	        key: "setWidth",
-	        value: function setWidth(pixel) {
-	            if (Canvas.ctx) {
-	                Canvas.ctx.lineWidth = pixel;
-	                Canvas.ctx.strokeWidth = pixel;
-	            }
-	        }
-
-	        /**
-	         * draw Circle with given x, y.
-	         * radius: radius of Circle @number
-	         * fill @bool
-	         */
-
-	    }, {
-	        key: "drawPoint",
-	        value: function drawPoint(coords, radius, fill, image, rotate, text) {
-	            var imgWidth = void 0,
-	                imgHeight = void 0;
-	            Canvas.setFill("#EEE");
-	            Canvas.setStroke("#EE1");
-	            if (coords instanceof Array && coords.length == 2) {
-	                Canvas.ctx.beginPath();
-	                if (image) {
-	                    Canvas.img.src = image;
-	                    if (radius) {
-	                        imgWidth = radius;
-	                        imgHeight = radius;
-	                    } else {
-	                        imgWidth = Canvas.img.width;
-	                        imgHeight = Canvas.img.height;
-	                    }
-	                    // drawImage(img, x2left, y2up, imgWidth, imgHeight)
-	                    // console.log("rendering drone..with width:" + imgWidth + " height:" + imgHeight);
-	                    var _y = Canvas.height - coords[1];
-	                    if (rotate) Canvas.rotateCtx(coords, rotate);
-	                    Canvas.ctx.drawImage(Canvas.img, parseInt(coords[0]), parseInt(_y), imgWidth, imgHeight);
-	                    if (rotate) Canvas.restore(coords);
-	                    return;
-	                }
-	                var y = Canvas.height - coords[1];
-	                Canvas.ctx.arc(parseInt(coords[0]), parseInt(y), radius, 0, Math.PI * 2);
-
-	                if (typeof rotate == 'number') {
-	                    var tmp = rotate % (Math.PI * 2) - Math.PI / 2;
-	                    Canvas.ctx.arc(parseInt(coords[0]), parseInt(y), radius + 2, tmp - Math.PI / 4, tmp + Math.PI / 4);
-	                    // console.log("rendering drone..with rotate:" + tmp);
-	                }
-
-	                if (text) Canvas.ctx.fillText(text, coords[0], parseInt(y) - 4);
-
-	                if (fill) {
-	                    Canvas.ctx.fill();
-	                } else {
-	                    Canvas.ctx.stroke();
-	                }
-	            } else return;
-	        }
-	    }, {
-	        key: "restore",
-	        value: function restore(coords) {
-	            var y = Canvas.height - coords[1];
-	            Canvas.ctx.translate(parseInt(-coords[0]), parseInt(-y));
-	            Canvas.ctx.restore();
-	        }
-
-	        /**
-	         * rotate by the obj! 
-	         * first save ctx and translate to the obj center..
-	         * draw obj after ctx rotate !!
-	         * then translate back and retore
-	         */
-
-	    }, {
-	        key: "rotateCtx",
-	        value: function rotateCtx(coords, rotate) {
-	            Canvas.ctx.save();
-	            var y = Canvas.height - coords[1];
-	            Canvas.ctx.translate(parseInt(coords[0]), parseInt(y));
-	            Canvas.ctx.rotate(rotate);
-	        }
-
-	        /**
-	         * drawBar with given Value..
-	         * x: where to draw in X axis..
-	         * width: bar width,
-	         * value: bar y value.
-	         * fill: fill or stroke. default false.
-	         */
-
-	    }, {
-	        key: "drawBar",
-	        value: function drawBar(x, width, value, fill) {
-	            var barY = Canvas.height - value;
-	            if (fill) {
-	                // fillRect(leftUP.X, Y, RectWidth, RectHeight)
-	                Canvas.ctx.fillRect(x, barY, width, value);
-	            } else {
-	                Canvas.ctx.strokeRect(x, barY, width, value);
-	            }
-	        }
-
-	        /**
-	         * drawLine with given Value..@Array
-	         * lwidth : lineWidth @number
-	         * dash: default false @bool
-	         * fill: closeLine to a polygon
-	         */
-
-	    }, {
-	        key: "drawLine",
-	        value: function drawLine(data, lwidth, dash, fill) {
-	            if (data instanceof Array && data.length > 0) {
-	                Canvas.ctx.strokeStyle = "#FF0000";
-	                Canvas.ctx.lineWidth = lwidth ? lwidth : 2;
-	                Canvas.ctx.beginPath();
-	                // for drawing area close with xaxis.. render first point.
-	                if (fill) {
-	                    Canvas.ctx.moveTo(-100, Canvas.height);
-	                }
-	                for (var i = 0; i < data.length; i++) {
-	                    // each point of line contains x, y.
-	                    if (data[i] instanceof Array && data[i].length == 2) {
-	                        var pointy = Canvas.height - data[i][1];
-	                        Canvas.ctx.lineTo(data[i][0], pointy);
-	                    }
-	                }
-	                if (fill) {
-	                    // close with beginPath point
-	                    Canvas.ctx.lineTo(data[data.length - 1][0], Canvas.height);
-	                    Canvas.ctx.closePath();
-	                    // Canvas.ctx.stroke();
-	                    Canvas.ctx.fill();
-	                } else {
-	                    Canvas.ctx.stroke();
-	                }
-	            }
-	        }
-
-	        /**
-	         * draw Math.sin with canvas.
-	         */
-	        // static drawDemoline() {
-	        //     let base = 50;
-
-	        // }
-
-	        /**
-	         * drawBars with given data..
-	         * width: bar width,
-	         * data: Array of values..
-	         * fill: fill or stroke. default false.
-	         */
-
-	    }, {
-	        key: "drawBars",
-	        value: function drawBars(data, fill) {
-	            Canvas.clearCanv();
-	            Canvas.ctx.strokeStyle = "#000";
-	            Canvas.setWidth(2);
-	            var barY = void 0,
-	                barX = 10;
-	            if (data instanceof Array) {
-	                var segWidth = (Canvas.width - 20) / data.length;
-	                var barWidth = segWidth * 0.7;
-	                for (var i = 0; i < data.length; i++) {
-	                    Canvas.drawBar(barX, barWidth, data[i]);
-	                    barX += segWidth;
-	                }
-	            } else {
-	                console.error('pls Input Array Data');
-	            }
-	            console.warn("Bars rendered complete..");
-	        }
-	    }, {
-	        key: "clearCanv",
-	        value: function clearCanv() {
-	            Canvas.ctx.clearRect(0, 0, Canvas.width, Canvas.height);
-	            Canvas.setFill("#000");
-	            Canvas.ctx.fillRect(0, 0, Canvas.width, Canvas.height);
-	        }
-	    }]);
-
-	    return Canvas;
-	}();
-
-	exports.default = Canvas;
-
-/***/ },
-/* 7 */
-/***/ function(module, exports, __webpack_require__) {
-
-	'use strict';
-
-	Object.defineProperty(exports, "__esModule", {
-	    value: true
-	});
-
-	var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
-
-	var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
-
-	var _canvas = __webpack_require__(6);
-
-	var _canvas2 = _interopRequireDefault(_canvas);
-
-	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
-	var chart = function () {
-	    // init chart bind with a div element @object.
-	    function chart(opts) {
-	        _classCallCheck(this, chart);
-
-	        this.ele = opts.ele ? opts.ele : null;
-	        this.data = opts.data ? opts.data : [];
-	        this.type = opts.type ? opts.type : null;
-	        this.maxValue = 0;
-	        this.rotate = opts.rotate ? opts.rotate : 0;
-	        // specify url as data source.. update by GET.
-	        this.url = opts.url ? opts.url : null;
-	    }
-
-	    // new Promise to GET latest data, then redraw
-
-
-	    _createClass(chart, [{
-	        key: 'updateData',
-	        value: function updateData() {}
-	        // new Promise() 
-
-
-	        /**
-	         * set chart.data with Array instance, then redraw.
-	         */
-
-	    }, {
-	        key: 'setData',
-	        value: function setData(data) {
-	            this.data = data.coords;
-	            this.rotate = data.rotate;
-	            this.dataName = data.name;
-	            _canvas2.default.clearCanv();
-	            this.render();
-	            return this;
-	        }
-
-	        /**
-	         * render data in Canvas according data dimension
-	         * width different strategy..
-	         */
-
-	    }, {
-	        key: 'render',
-	        value: function render() {
-	            // if line or poly
-	            if (this.data instanceof Array && this.data.length > 0 && this.data[0] instanceof Array) {
-	                _canvas2.default.drawLine(this.data, null, null);
-	            } else if (this.data instanceof Array && this.data.length > 0) {
-	                if (this.url) {
-	                    // render point with icon image.
-	                    _canvas2.default.drawPoint(this.data, 20, null, this.url, this.rotate, this.dataName);
-	                } else {
-	                    _canvas2.default.drawPoint(this.data, 2, null, null, this.rotate, this.dataName);
-	                }
-	            }
-	        }
-
-	        // stat max value of Data and set to maxValue. only for 1 dimension data.[y1, y2, y3 ...]
-
-	    }, {
-	        key: 'statMax',
-	        value: function statMax() {
-	            var _this = this;
-
-	            if (_typeof(this.data) == Array && this.data.length > 0) {
-	                this.data.forEach(function (value) {
-	                    if (_this.maxValue < value) _this.maxValue = value;
-	                });
-	            }
-	            return this;
-	        }
-
-	        /**
-	        * generate Math.sin/cos line data..
-	         * 
-	        * sin: 'sin'/'cos'/'tan' @string
-	        * xEnd: finally returned points number.
-	        * fatness: fatness of line. bigger the fatter will the line be.
-	        * offset: offset to left with animation. @number
-	         * 
-	         * Return: 2 dimension Array. [[x1,y1], [x2,y2] ...] @Array
-	        */
-
-	    }, {
-	        key: 'generateSinLine',
-	        value: function generateSinLine(sin, xEnd, fatness, offset) {
-	            var points = [],
-	                y = 0,
-	                yheight = 50,
-	                ybase = 50,
-	                fat = fatness ? fatness : 20.0,
-	                off = offset ? offset : 0;
-	            // 像素个数 xEnd. 
-	            for (var x = 0; x < xEnd; x++) {
-	                if (sin == 'sin') {
-	                    y = parseInt(Math.sin(x / fat) * yheight);
-	                } else if (sin == 'cos') y = parseInt(Math.cos(x / fat) * yheight);else if (sin == 'tan') y = parseInt(Math.tan(x / fat) * yheight);
-
-	                points.push([x - off, y + ybase]);
-	            }
-	            return points;
-	        }
-	    }]);
-
-	    return chart;
-	}();
-
-	exports.default = chart;
-
-
-	var strategies = {};
-
-/***/ },
 /* 8 */
 /***/ function(module, exports, __webpack_require__) {
 
-	'use strict';
+	"use strict";
 
 	Object.defineProperty(exports, "__esModule", {
 	    value: true
@@ -829,1633 +1056,258 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
-	var _drone = __webpack_require__(2);
-
-	var _drone2 = _interopRequireDefault(_drone);
-
-	var _coreDecorators = __webpack_require__(9);
-
-	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+	var _addrObj = __webpack_require__(9);
 
 	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
-	var controllers = function () {
-	    function controllers() {
-	        _classCallCheck(this, controllers);
+	var CURSOR_RANGE = 1000;
+
+	var lgSelect = function () {
+	    function lgSelect(opt) {
+	        _classCallCheck(this, lgSelect);
+
+	        this.filterStr = "";
+	        // actually here should defineProperty filteredOptions !! to watch the change.
+	        this.filteredOptions = [];
+	        this.dropOpen = false;
+	        this.cursor = 0;
+	        this.dropMenu = null;
+	        this.selectInput = null;
+	        this.selectBtn = null;
+	        this.selected = {};
+	        this.options = opt.options || [];
+
+	        console.log("ngInit...");
+	        this.selected.name = opt.title || "select option";
+	        // filter 1000 elements to fill in dropMenu.        
+	        this.filterAO();
+	        this.bindDOM();
 	    }
 
-	    _createClass(controllers, null, [{
-	        key: 'gameControl',
+	    /** implement universe data-bind Directive.. */
 
-	        /**
-	         * GameController bind with a drone instance.. 
-	         * After start this controller, use WSAD to move drone.
-	         */
-	        value: function gameControl(drone) {
-	            if (drone instanceof _drone2.default !== true) {
-	                console.error("gameControl must bind with a drone instance.");
-	                return;
+
+	    _createClass(lgSelect, [{
+	        key: "bindDOM",
+	        value: function bindDOM() {
+	            var selectBtn = document.querySelector(".lg-select");
+	            var selectInput = document.querySelector("#selectInput");
+	            var selectContainer = document.querySelector("#container");
+
+	            var dropMenu = document.createElement("ul");
+	            dropMenu.className = "dropdown-menu";
+	            selectBtn.parentElement.appendChild(dropMenu);
+	            this.dropMenu = dropMenu;
+	            this.selectInput = selectInput;
+	            this.selectBtn = selectBtn;
+
+	            if (selectBtn && selectInput && selectContainer && dropMenu) {
+	                selectBtn.addEventListener("click", this.wrapHandler(this, this.toggleDropdown));
+	                selectInput.onblur = this.wrapHandler(this, this.searchAO);
+	                selectContainer.addEventListener("click", this.wrapHandler(this, this.hideDropdown));
+	                dropMenu.onclick = this.wrapHandler(this, this.selectAO);
+	                dropMenu.onscroll = this.wrapHandler(this, this.scrollListener);
+	            } else {
+	                console.error("bindDom error.");
 	            }
-	            document.body.addEventListener('keydown', function (e) {
-	                if (e.which === 37 || e.which === 65) {
-	                    drone.turnLeft();
-	                }
-	                if (e.which === 39 || e.which === 68) {
-	                    drone.turnRight();
-	                }
-	                if (e.which === 38 || e.which === 87) {
-	                    // faster
-	                    drone.accelerate();
-	                }
-	                if (e.which === 40 || e.which === 83) {
-	                    // slower
-	                    drone.brake();
-	                }
-	                if (e.which === 32) {
-	                    drone.fire();
-	                }
-	            });
-	            console.log("gameControl register success.");
+	            this.updateDOM();
+	        }
+	    }, {
+	        key: "wrapHandler",
+	        value: function wrapHandler(ctx, func) {
+	            return func.bind(ctx);
 	        }
 
 	        /**
-	         * Calculate bullets location based on drones.
+	         * tranverse component DOM ele, and update the DOM value..
 	         */
 
 	    }, {
-	        key: 'bulletCalculator',
-	        value: function bulletCalculator(drones) {
-	            if (Array.isArray(drones)) {
-	                for (var i = 0; i < drones.length; i++) {
-	                    var curDrone = drone[i];
-	                    var curBullets = curDrone.bullets;
-	                    // Calculate bullets coords
-	                    if (curDrone.firing && curBullets) {} else {}
+	        key: "updateDOM",
+	        value: function updateDOM() {
+	            // generate li depend on this.options... bind span innerText with *.name
+	            var itemsHtml = "";
+	            for (var i = 0; i < this.filteredOptions.length; i++) {
+	                if (this.filteredOptions[i].name) {
+	                    itemsHtml += "<li><span>" + this.filteredOptions[i].name + "</span></li>";
 	                }
 	            }
+	            this.dropMenu.innerHTML = itemsHtml;
+	            this.selectBtn.innerHTML = this.selected.name + "<span class=\"caret\"></span>";
 	        }
-
-	        /**
-	         * Add AI robots shooting at player..
-	         * @input num: number. how many robots to create. 
-	         */
-
 	    }, {
-	        key: 'addRobots',
-	        value: function addRobots(num) {
-	            var robot = new _drone2.default({});
-	            return robot;
+	        key: "getSelected",
+	        value: function getSelected() {
+	            return this.selected;
 	        }
-
-	        /**
-	         * Dashboard bind with a drone instance and div element... 
-	         * After start this controller, use WSAD to move drone.
-	         */
-	        // @deprecate
-
 	    }, {
-	        key: 'dashBoard',
-	        value: function dashBoard(drone, ele) {
-	            if (drone instanceof _drone2.default !== true) {
-	                console.error("dashBoard must bind with a drone instance.");
+	        key: "setOptions",
+	        value: function setOptions(options) {
+	            this.options = options;
+	            return this;
+	        }
+	    }, {
+	        key: "filterAO",
+
+	        // fill dropMenu depend on the index range..
+	        value: function filterAO() {
+	            try {
+	                if (this.cursor < 0 || this.cursor > this.options.length) return;
+	                // #issue to address: slice safe
+	                this.filteredOptions = this.options.slice(this.cursor, this.cursor + CURSOR_RANGE);
+	                console.log("filtering addrobjs to promote performance..");
+	            } catch (error) {
+	                console.error(error);
+	            }
+	        }
+	    }, {
+	        key: "searchAO",
+
+	        // keyUp listener.
+	        value: function searchAO(evt) {
+	            var _this = this;
+	            this.filterStr = this.selectInput.value;
+	            if (this.filterStr.length === 0) {
+	                this.cursor = 0;
+	                this.filterAO();
+	                this.updateDOM();
 	                return;
 	            }
 	            try {
-	                setInterval(function () {
-	                    ele.innerHTML = drone.name + "<br> coords: " + drone.point.coordinates[0].toFixed(1) + ", " + drone.point.coordinates[1].toFixed(1) + "<br>" + 'speed: ' + drone.speed + "<br>" + 'direction: ' + (drone.direction % (Math.PI * 2) * 180 / Math.PI).toFixed(1);
+	                var tempAOs = [];
+	                for (var j = 0; j < this.options.length; j++) {
+	                    var curAO = this.options[j];
+	                    if (curAO.name.indexOf(this.filterStr) > -1) {
+	                        tempAOs.push(curAO);
+	                    }
+	                }
+	                this.filteredOptions = tempAOs;
+	                this.updateDOM();
+	                setTimeout(function () {
+	                    _this.openDropdown();
 	                }, 200);
-	            } catch (e) {
-	                console.error(e);
+	                console.warn("search keyword is: " + this.filterStr, " search res num: " + tempAOs.length);
+	            } catch (error) {
+	                console.error("something happen when search AO");
 	            }
-	            console.log("dashBoard register success.");
+	        }
+	    }, {
+	        key: "selectAO",
+
+	        // selectAO by click AO list-item.
+	        value: function selectAO(evt) {
+	            var target = evt.target || evt.srcElement;
+	            if (target.tagName && target.tagName === "LI") {
+	                this.selected = {
+	                    'name': target.innerText
+	                };
+	                console.warn("selected AO: " + target.innerText);
+	                this.updateDOM();
+	                return;
+	            } else {
+	                console.warn("NOT selected AO.........");
+	            }
+	        }
+	    }, {
+	        key: "scrollListener",
+
+	        // to listen scroll on dropMenu, in order to filter new AO... throttle must be applied to this..
+	        value: function scrollListener(evt) {
+	            var _this2 = this;
+
+	            var _this = this;
+	            if (this.filterStr.length == 0) {
+	                // cooling time 300ms for scrollListener.
+	                // this.throttle(this.loadMoreAO, 300);
+	                setTimeout(function () {
+	                    _this.loadMoreAO();
+	                    _this2.updateDOM();
+	                }, 300);
+	            }
+	        }
+	    }, {
+	        key: "loadMoreAO",
+
+	        // if function called as eventListener !! `this` means the Element which trigger evt ??
+	        value: function loadMoreAO() {
+	            // console.warn("when handling wheel evt, `this` means " + this);
+	            if (this.dropMenu.scrollHeight - this.dropMenu.scrollTop < 211 && this.cursor < this.options.length - CURSOR_RANGE) {
+	                // scroll to next page.
+	                this.cursor += CURSOR_RANGE;
+	                this.filterAO();
+	                this.dropMenu.scrollTop = 1;
+	            } else if (this.dropMenu.scrollTop < 1 && this.cursor > CURSOR_RANGE - 1) {
+	                this.cursor -= CURSOR_RANGE;
+	                this.filterAO();
+	                this.dropMenu.scrollTop = this.dropMenu.scrollHeight * 0.95;
+	            } else {
+	                return;
+	            }
+	        }
+	    }, {
+	        key: "toggleDropdown",
+
+	        // all variable need stric type.
+	        value: function toggleDropdown(evt) {
+	            var dropBtn = evt.target || evt.srcElement;
+	            evt.stopPropagation();
+	            if (!this.dropOpen && dropBtn.parentElement) {
+	                // parent.. add Class .open
+	                this.dropOpen = true;
+	                setTimeout(function () {
+	                    dropBtn.parentElement.className += " open";
+	                    console.log("menu open...");
+	                }, 50);
+	            } else if (this.dropOpen) {
+	                // hide the dropMenu
+	                dropBtn.parentElement.className = "dropdown-container";
+	                this.dropOpen = false;
+	                console.log("menu hidden...`this` indicate: " + this);
+	            }
+	        }
+	    }, {
+	        key: "openDropdown",
+	        value: function openDropdown() {
+	            if (this.dropMenu && this.dropMenu.parentElement) {
+	                var dropContainer = this.dropMenu.parentElement;
+	                dropContainer.className += " open";
+	                this.dropOpen = true;
+	            }
+	        }
+	    }, {
+	        key: "hideDropdown",
+	        value: function hideDropdown(evt) {
+	            // hide the dropMenu
+	            var dropdownContainer = document.querySelector(".dropdown-container");
+	            dropdownContainer.className = "dropdown-container";
+	            this.dropOpen = false;
 	        }
 	    }]);
 
-	    return controllers;
+	    return lgSelect;
 	}();
 
-	exports.default = controllers;
+	exports.default = lgSelect;
 
 /***/ },
 /* 9 */
-/***/ function(module, exports, __webpack_require__) {
-
-	/**
-	 * core-decorators.js
-	 * (c) 2016 Jay Phelps and contributors
-	 * MIT Licensed
-	 * https://github.com/jayphelps/core-decorators.js
-	 * @license
-	 */
-	'use strict';
-
-	Object.defineProperty(exports, '__esModule', {
-	  value: true
-	});
-
-	function _interopRequire(obj) { return obj && obj.__esModule ? obj['default'] : obj; }
-
-	var _override = __webpack_require__(10);
-
-	exports.override = _interopRequire(_override);
-
-	var _deprecate = __webpack_require__(13);
-
-	exports.deprecate = _interopRequire(_deprecate);
-	exports.deprecated = _interopRequire(_deprecate);
-
-	var _suppressWarnings = __webpack_require__(14);
-
-	exports.suppressWarnings = _interopRequire(_suppressWarnings);
-
-	var _memoize = __webpack_require__(15);
-
-	exports.memoize = _interopRequire(_memoize);
-
-	var _autobind = __webpack_require__(16);
-
-	exports.autobind = _interopRequire(_autobind);
-
-	var _readonly = __webpack_require__(17);
-
-	exports.readonly = _interopRequire(_readonly);
-
-	var _enumerable = __webpack_require__(18);
-
-	exports.enumerable = _interopRequire(_enumerable);
-
-	var _nonenumerable = __webpack_require__(19);
-
-	exports.nonenumerable = _interopRequire(_nonenumerable);
-
-	var _nonconfigurable = __webpack_require__(20);
-
-	exports.nonconfigurable = _interopRequire(_nonconfigurable);
-
-	var _debounce = __webpack_require__(21);
-
-	exports.debounce = _interopRequire(_debounce);
-
-	var _throttle = __webpack_require__(22);
-
-	exports.throttle = _interopRequire(_throttle);
-
-	var _decorate = __webpack_require__(23);
-
-	exports.decorate = _interopRequire(_decorate);
-
-	var _mixin = __webpack_require__(24);
-
-	exports.mixin = _interopRequire(_mixin);
-	exports.mixins = _interopRequire(_mixin);
-
-	var _lazyInitialize = __webpack_require__(12);
-
-	exports.lazyInitialize = _interopRequire(_lazyInitialize);
-
-	var _time = __webpack_require__(25);
-
-	exports.time = _interopRequire(_time);
-
-	var _extendDescriptor = __webpack_require__(26);
-
-	exports.extendDescriptor = _interopRequire(_extendDescriptor);
-
-	// Helper to apply decorators to a class without transpiler support
-
-	var _applyDecorators = __webpack_require__(27);
-
-	exports.applyDecorators = _interopRequire(_applyDecorators);
-
-/***/ },
-/* 10 */
-/***/ function(module, exports, __webpack_require__) {
-
-	'use strict';
-
-	Object.defineProperty(exports, '__esModule', {
-	  value: true
-	});
-
-	var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ('value' in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
-
-	exports['default'] = override;
-
-	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } }
-
-	var _privateUtils = __webpack_require__(11);
-
-	var GENERIC_FUNCTION_ERROR = '{child} does not properly override {parent}';
-	var FUNCTION_REGEXP = /^function ([_$a-zA-Z\xA0-\uFFFF][_$a-zA-Z0-9\xA0-\uFFFF]*)?(\([^\)]*\))[\s\S]+$/;
-
-	var SyntaxErrorReporter = (function () {
-	  _createClass(SyntaxErrorReporter, [{
-	    key: '_getTopic',
-	    value: function _getTopic(descriptor) {
-	      if (descriptor === undefined) {
-	        return null;
-	      }
-
-	      if ('value' in descriptor) {
-	        return descriptor.value;
-	      }
-
-	      if ('get' in descriptor) {
-	        return descriptor.get;
-	      }
-
-	      if ('set' in descriptor) {
-	        return descriptor.set;
-	      }
-	    }
-	  }, {
-	    key: '_extractTopicSignature',
-	    value: function _extractTopicSignature(topic) {
-	      switch (typeof topic) {
-	        case 'function':
-	          return this._extractFunctionSignature(topic);
-	        default:
-	          return this.key;
-	      }
-	    }
-	  }, {
-	    key: '_extractFunctionSignature',
-	    value: function _extractFunctionSignature(fn) {
-	      var _this = this;
-
-	      return fn.toString().replace(FUNCTION_REGEXP, function (match, name, params) {
-	        if (name === undefined) name = _this.key;
-	        return name + params;
-	      });
-	    }
-	  }, {
-	    key: 'key',
-	    get: function get() {
-	      return this.childDescriptor.key;
-	    }
-	  }, {
-	    key: 'parentNotation',
-	    get: function get() {
-	      return this.parentKlass.constructor.name + '#' + this.parentPropertySignature;
-	    }
-	  }, {
-	    key: 'childNotation',
-	    get: function get() {
-	      return this.childKlass.constructor.name + '#' + this.childPropertySignature;
-	    }
-	  }, {
-	    key: 'parentTopic',
-	    get: function get() {
-	      return this._getTopic(this.parentDescriptor);
-	    }
-	  }, {
-	    key: 'childTopic',
-	    get: function get() {
-	      return this._getTopic(this.childDescriptor);
-	    }
-	  }, {
-	    key: 'parentPropertySignature',
-	    get: function get() {
-	      return this._extractTopicSignature(this.parentTopic);
-	    }
-	  }, {
-	    key: 'childPropertySignature',
-	    get: function get() {
-	      return this._extractTopicSignature(this.childTopic);
-	    }
-	  }]);
-
-	  function SyntaxErrorReporter(parentKlass, childKlass, parentDescriptor, childDescriptor) {
-	    _classCallCheck(this, SyntaxErrorReporter);
-
-	    this.parentKlass = parentKlass;
-	    this.childKlass = childKlass;
-	    this.parentDescriptor = parentDescriptor;
-	    this.childDescriptor = childDescriptor;
-	  }
-
-	  _createClass(SyntaxErrorReporter, [{
-	    key: 'assert',
-	    value: function assert(condition) {
-	      var msg = arguments.length <= 1 || arguments[1] === undefined ? '' : arguments[1];
-
-	      if (condition !== true) {
-	        this.error(GENERIC_FUNCTION_ERROR + msg);
-	      }
-	    }
-	  }, {
-	    key: 'error',
-	    value: function error(msg) {
-	      var _this2 = this;
-
-	      msg = msg
-	      // Replace lazily, because they actually might not
-	      // be available in all cases
-	      .replace('{parent}', function (m) {
-	        return _this2.parentNotation;
-	      }).replace('{child}', function (m) {
-	        return _this2.childNotation;
-	      });
-	      throw new SyntaxError(msg);
-	    }
-	  }]);
-
-	  return SyntaxErrorReporter;
-	})();
-
-	function getDescriptorType(descriptor) {
-	  if (descriptor.hasOwnProperty('value')) {
-	    return 'data';
-	  }
-
-	  if (descriptor.hasOwnProperty('get') || descriptor.hasOwnProperty('set')) {
-	    return 'accessor';
-	  }
-
-	  // If none of them exist, browsers treat it as
-	  // a data descriptor with a value of `undefined`
-	  return 'data';
-	}
-
-	function checkFunctionSignatures(parent, child, reporter) {
-	  reporter.assert(parent.length === child.length);
-	}
-
-	function checkDataDescriptors(parent, child, reporter) {
-	  var parentValueType = typeof parent.value;
-	  var childValueType = typeof child.value;
-
-	  if (parentValueType === 'undefined' && childValueType === 'undefined') {
-	    // class properties can be any expression, which isn't ran until the
-	    // the instance is created, so we can't reliably get type information
-	    // for them yet (per spec). Perhaps when Babel includes flow-type info
-	    // in runtime? Tried regex solutions, but super hacky and only feasible
-	    // on primitives, which is confusing for usage...
-	    reporter.error('descriptor values are both undefined. (class properties are are not currently supported)\'');
-	  }
-
-	  if (parentValueType !== childValueType) {
-	    var isFunctionOverUndefined = childValueType === 'function' && parentValueType === undefined;
-	    // Even though we don't support class properties, this
-	    // will still handle more than just functions, just in case.
-	    // Shadowing an undefined value is an error if the inherited
-	    // value was undefined (usually a class property, not a method)
-	    if (isFunctionOverUndefined || parentValueType !== undefined) {
-	      reporter.error('value types do not match. {parent} is "' + parentValueType + '", {child} is "' + childValueType + '"');
-	    }
-	  }
-
-	  // Switch, in preparation for supporting more types
-	  switch (childValueType) {
-	    case 'function':
-	      checkFunctionSignatures(parent.value, child.value, reporter);
-	      break;
-
-	    default:
-	      reporter.error('Unexpected error. Please file a bug with: {parent} is "' + parentValueType + '", {child} is "' + childValueType + '"');
-	      break;
-	  }
-	}
-
-	function checkAccessorDescriptors(parent, child, reporter) {
-	  var parentHasGetter = typeof parent.get === 'function';
-	  var childHasGetter = typeof child.get === 'function';
-	  var parentHasSetter = typeof parent.set === 'function';
-	  var childHasSetter = typeof child.set === 'function';
-
-	  if (parentHasGetter || childHasGetter) {
-	    if (!parentHasGetter && parentHasSetter) {
-	      reporter.error('{parent} is setter but {child} is getter');
-	    }
-
-	    if (!childHasGetter && childHasSetter) {
-	      reporter.error('{parent} is getter but {child} is setter');
-	    }
-
-	    checkFunctionSignatures(parent.get, child.get, reporter);
-	  }
-
-	  if (parentHasSetter || childHasSetter) {
-	    if (!parentHasSetter && parentHasGetter) {
-	      reporter.error('{parent} is getter but {child} is setter');
-	    }
-
-	    if (!childHasSetter && childHasGetter) {
-	      reporter.error('{parent} is setter but {child} is getter');
-	    }
-
-	    checkFunctionSignatures(parent.set, child.set, reporter);
-	  }
-	}
-
-	function checkDescriptors(parent, child, reporter) {
-	  var parentType = getDescriptorType(parent);
-	  var childType = getDescriptorType(child);
-
-	  if (parentType !== childType) {
-	    reporter.error('descriptor types do not match. {parent} is "' + parentType + '", {child} is "' + childType + '"');
-	  }
-
-	  switch (childType) {
-	    case 'data':
-	      checkDataDescriptors(parent, child, reporter);
-	      break;
-
-	    case 'accessor':
-	      checkAccessorDescriptors(parent, child, reporter);
-	      break;
-	  }
-	}
-
-	var suggestionTransforms = [function (key) {
-	  return key.toLowerCase();
-	}, function (key) {
-	  return key.toUpperCase();
-	}, function (key) {
-	  return key + 's';
-	}, function (key) {
-	  return key.slice(0, -1);
-	}, function (key) {
-	  return key.slice(1, key.length);
-	}];
-
-	function findPossibleAlternatives(superKlass, key) {
-	  for (var i = 0, l = suggestionTransforms.length; i < l; i++) {
-	    var fn = suggestionTransforms[i];
-	    var suggestion = fn(key);
-
-	    if (suggestion in superKlass) {
-	      return suggestion;
-	    }
-	  }
-
-	  return null;
-	}
-
-	function handleDescriptor(target, key, descriptor) {
-	  descriptor.key = key;
-	  var superKlass = Object.getPrototypeOf(target);
-	  var superDescriptor = Object.getOwnPropertyDescriptor(superKlass, key);
-	  var reporter = new SyntaxErrorReporter(superKlass, target, superDescriptor, descriptor);
-
-	  if (superDescriptor === undefined) {
-	    var suggestedKey = findPossibleAlternatives(superKlass, key);
-	    var suggestion = suggestedKey ? '\n\n  Did you mean "' + suggestedKey + '"?' : '';
-	    reporter.error('No descriptor matching {child} was found on the prototype chain.' + suggestion);
-	  }
-
-	  checkDescriptors(superDescriptor, descriptor, reporter);
-
-	  return descriptor;
-	}
-
-	function override() {
-	  for (var _len = arguments.length, args = Array(_len), _key = 0; _key < _len; _key++) {
-	    args[_key] = arguments[_key];
-	  }
-
-	  return (0, _privateUtils.decorate)(handleDescriptor, args);
-	}
-
-	module.exports = exports['default'];
-
-/***/ },
-/* 11 */
-/***/ function(module, exports, __webpack_require__) {
-
-	'use strict';
-
-	Object.defineProperty(exports, '__esModule', {
-	  value: true
-	});
-	var _slice = Array.prototype.slice;
-
-	var _createDecoratedClass = (function () { function defineProperties(target, descriptors, initializers) { for (var i = 0; i < descriptors.length; i++) { var descriptor = descriptors[i]; var decorators = descriptor.decorators; var key = descriptor.key; delete descriptor.key; delete descriptor.decorators; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ('value' in descriptor || descriptor.initializer) descriptor.writable = true; if (decorators) { for (var f = 0; f < decorators.length; f++) { var decorator = decorators[f]; if (typeof decorator === 'function') { descriptor = decorator(target, key, descriptor) || descriptor; } else { throw new TypeError('The decorator for method ' + descriptor.key + ' is of the invalid type ' + typeof decorator); } } if (descriptor.initializer !== undefined) { initializers[key] = descriptor; continue; } } Object.defineProperty(target, key, descriptor); } } return function (Constructor, protoProps, staticProps, protoInitializers, staticInitializers) { if (protoProps) defineProperties(Constructor.prototype, protoProps, protoInitializers); if (staticProps) defineProperties(Constructor, staticProps, staticInitializers); return Constructor; }; })();
-
-	exports.isDescriptor = isDescriptor;
-	exports.decorate = decorate;
-	exports.metaFor = metaFor;
-	exports.getOwnPropertyDescriptors = getOwnPropertyDescriptors;
-	exports.createDefaultSetter = createDefaultSetter;
-
-	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
-
-	function _toConsumableArray(arr) { if (Array.isArray(arr)) { for (var i = 0, arr2 = Array(arr.length); i < arr.length; i++) arr2[i] = arr[i]; return arr2; } else { return Array.from(arr); } }
-
-	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } }
-
-	function _defineDecoratedPropertyDescriptor(target, key, descriptors) { var _descriptor = descriptors[key]; if (!_descriptor) return; var descriptor = {}; for (var _key in _descriptor) descriptor[_key] = _descriptor[_key]; descriptor.value = descriptor.initializer ? descriptor.initializer.call(target) : undefined; Object.defineProperty(target, key, descriptor); }
-
-	var _lazyInitialize = __webpack_require__(12);
-
-	var _lazyInitialize2 = _interopRequireDefault(_lazyInitialize);
-
-	var defineProperty = Object.defineProperty;
-	var getOwnPropertyDescriptor = Object.getOwnPropertyDescriptor;
-	var getOwnPropertyNames = Object.getOwnPropertyNames;
-	var getOwnPropertySymbols = Object.getOwnPropertySymbols;
-
-	function isDescriptor(desc) {
-	  if (!desc || !desc.hasOwnProperty) {
-	    return false;
-	  }
-
-	  var keys = ['value', 'initializer', 'get', 'set'];
-
-	  for (var i = 0, l = keys.length; i < l; i++) {
-	    if (desc.hasOwnProperty(keys[i])) {
-	      return true;
-	    }
-	  }
-
-	  return false;
-	}
-
-	function decorate(handleDescriptor, entryArgs) {
-	  if (isDescriptor(entryArgs[entryArgs.length - 1])) {
-	    return handleDescriptor.apply(undefined, _toConsumableArray(entryArgs).concat([[]]));
-	  } else {
-	    return function () {
-	      return handleDescriptor.apply(undefined, _slice.call(arguments).concat([entryArgs]));
-	    };
-	  }
-	}
-
-	var Meta = (function () {
-	  var _instanceInitializers = {};
-
-	  function Meta() {
-	    _classCallCheck(this, Meta);
-
-	    _defineDecoratedPropertyDescriptor(this, 'debounceTimeoutIds', _instanceInitializers);
-
-	    _defineDecoratedPropertyDescriptor(this, 'throttleTimeoutIds', _instanceInitializers);
-
-	    _defineDecoratedPropertyDescriptor(this, 'throttlePreviousTimestamps', _instanceInitializers);
-
-	    _defineDecoratedPropertyDescriptor(this, 'throttleTrailingArgs', _instanceInitializers);
-	  }
-
-	  _createDecoratedClass(Meta, [{
-	    key: 'debounceTimeoutIds',
-	    decorators: [_lazyInitialize2['default']],
-	    initializer: function initializer() {
-	      return {};
-	    },
-	    enumerable: true
-	  }, {
-	    key: 'throttleTimeoutIds',
-	    decorators: [_lazyInitialize2['default']],
-	    initializer: function initializer() {
-	      return {};
-	    },
-	    enumerable: true
-	  }, {
-	    key: 'throttlePreviousTimestamps',
-	    decorators: [_lazyInitialize2['default']],
-	    initializer: function initializer() {
-	      return {};
-	    },
-	    enumerable: true
-	  }, {
-	    key: 'throttleTrailingArgs',
-	    decorators: [_lazyInitialize2['default']],
-	    initializer: function initializer() {
-	      return null;
-	    },
-	    enumerable: true
-	  }], null, _instanceInitializers);
-
-	  return Meta;
-	})();
-
-	var META_KEY = typeof Symbol === 'function' ? Symbol('__core_decorators__') : '__core_decorators__';
-
-	function metaFor(obj) {
-	  if (obj.hasOwnProperty(META_KEY) === false) {
-	    defineProperty(obj, META_KEY, {
-	      // Defaults: NOT enumerable, configurable, or writable
-	      value: new Meta()
-	    });
-	  }
-
-	  return obj[META_KEY];
-	}
-
-	var getOwnKeys = getOwnPropertySymbols ? function (object) {
-	  return getOwnPropertyNames(object).concat(getOwnPropertySymbols(object));
-	} : getOwnPropertyNames;
-
-	exports.getOwnKeys = getOwnKeys;
-
-	function getOwnPropertyDescriptors(obj) {
-	  var descs = {};
-
-	  getOwnKeys(obj).forEach(function (key) {
-	    return descs[key] = getOwnPropertyDescriptor(obj, key);
-	  });
-
-	  return descs;
-	}
-
-	function createDefaultSetter(key) {
-	  return function set(newValue) {
-	    Object.defineProperty(this, key, {
-	      configurable: true,
-	      writable: true,
-	      // IS enumerable when reassigned by the outside word
-	      enumerable: true,
-	      value: newValue
-	    });
-
-	    return newValue;
-	  };
-	}
-
-/***/ },
-/* 12 */
-/***/ function(module, exports, __webpack_require__) {
-
-	'use strict';
-
-	Object.defineProperty(exports, '__esModule', {
-	  value: true
-	});
-	exports['default'] = lazyInitialize;
-
-	var _privateUtils = __webpack_require__(11);
-
-	var defineProperty = Object.defineProperty;
-
-	function handleDescriptor(target, key, descriptor) {
-	  var configurable = descriptor.configurable;
-	  var enumerable = descriptor.enumerable;
-	  var initializer = descriptor.initializer;
-	  var value = descriptor.value;
-
-	  return {
-	    configurable: configurable,
-	    enumerable: enumerable,
-
-	    get: function get() {
-	      // This happens if someone accesses the
-	      // property directly on the prototype
-	      if (this === target) {
-	        return;
-	      }
-
-	      var ret = initializer ? initializer.call(this) : value;
-
-	      defineProperty(this, key, {
-	        configurable: configurable,
-	        enumerable: enumerable,
-	        writable: true,
-	        value: ret
-	      });
-
-	      return ret;
-	    },
-
-	    set: (0, _privateUtils.createDefaultSetter)(key)
-	  };
-	}
-
-	function lazyInitialize() {
-	  for (var _len = arguments.length, args = Array(_len), _key = 0; _key < _len; _key++) {
-	    args[_key] = arguments[_key];
-	  }
-
-	  return (0, _privateUtils.decorate)(handleDescriptor, args);
-	}
-
-	module.exports = exports['default'];
-
-/***/ },
-/* 13 */
-/***/ function(module, exports, __webpack_require__) {
-
-	'use strict';
-
-	Object.defineProperty(exports, '__esModule', {
-	  value: true
-	});
-
-	var _slicedToArray = (function () { function sliceIterator(arr, i) { var _arr = []; var _n = true; var _d = false; var _e = undefined; try { for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) { _arr.push(_s.value); if (i && _arr.length === i) break; } } catch (err) { _d = true; _e = err; } finally { try { if (!_n && _i['return']) _i['return'](); } finally { if (_d) throw _e; } } return _arr; } return function (arr, i) { if (Array.isArray(arr)) { return arr; } else if (Symbol.iterator in Object(arr)) { return sliceIterator(arr, i); } else { throw new TypeError('Invalid attempt to destructure non-iterable instance'); } }; })();
-
-	var _extends = Object.assign || function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; };
-
-	exports['default'] = deprecate;
-
-	var _privateUtils = __webpack_require__(11);
-
-	var DEFAULT_MSG = 'This function will be removed in future versions.';
-
-	function handleDescriptor(target, key, descriptor, _ref) {
-	  var _ref2 = _slicedToArray(_ref, 2);
-
-	  var _ref2$0 = _ref2[0];
-	  var msg = _ref2$0 === undefined ? DEFAULT_MSG : _ref2$0;
-	  var _ref2$1 = _ref2[1];
-	  var options = _ref2$1 === undefined ? {} : _ref2$1;
-
-	  if (typeof descriptor.value !== 'function') {
-	    throw new SyntaxError('Only functions can be marked as deprecated');
-	  }
-
-	  var methodSignature = target.constructor.name + '#' + key;
-
-	  if (options.url) {
-	    msg += '\n\n    See ' + options.url + ' for more details.\n\n';
-	  }
-
-	  return _extends({}, descriptor, {
-	    value: function deprecationWrapper() {
-	      console.warn('DEPRECATION ' + methodSignature + ': ' + msg);
-	      return descriptor.value.apply(this, arguments);
-	    }
-	  });
-	}
-
-	function deprecate() {
-	  for (var _len = arguments.length, args = Array(_len), _key = 0; _key < _len; _key++) {
-	    args[_key] = arguments[_key];
-	  }
-
-	  return (0, _privateUtils.decorate)(handleDescriptor, args);
-	}
-
-	module.exports = exports['default'];
-
-/***/ },
-/* 14 */
-/***/ function(module, exports, __webpack_require__) {
-
-	'use strict';
-
-	Object.defineProperty(exports, '__esModule', {
-	  value: true
-	});
-
-	var _extends = Object.assign || function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; };
-
-	exports['default'] = suppressWarnings;
-
-	var _privateUtils = __webpack_require__(11);
-
-	function suppressedWarningNoop() {
-	  // Warnings are currently suppressed via @suppressWarnings
-	}
-
-	function applyWithoutWarnings(context, fn, args) {
-	  if (typeof console === 'object') {
-	    var nativeWarn = console.warn;
-	    console.warn = suppressedWarningNoop;
-	    var ret = fn.apply(context, args);
-	    console.warn = nativeWarn;
-	    return ret;
-	  } else {
-	    return fn.apply(context, args);
-	  }
-	}
-
-	function handleDescriptor(target, key, descriptor) {
-	  return _extends({}, descriptor, {
-	    value: function suppressWarningsWrapper() {
-	      return applyWithoutWarnings(this, descriptor.value, arguments);
-	    }
-	  });
-	}
-
-	function suppressWarnings() {
-	  for (var _len = arguments.length, args = Array(_len), _key = 0; _key < _len; _key++) {
-	    args[_key] = arguments[_key];
-	  }
-
-	  return (0, _privateUtils.decorate)(handleDescriptor, args);
-	}
-
-	module.exports = exports['default'];
-
-/***/ },
-/* 15 */
-/***/ function(module, exports, __webpack_require__) {
-
-	'use strict';
-
-	Object.defineProperty(exports, '__esModule', {
-	  value: true
-	});
-
-	var _extends = Object.assign || function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; };
-
-	exports['default'] = memoize;
-
-	function _defineProperty(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
-
-	var _privateUtils = __webpack_require__(11);
-
-	function toObject(cache, value) {
-	  if (value === Object(value)) {
-	    return value;
-	  }
-	  return cache[value] || (cache[value] = {});
-	}
-
-	function applyAndCache(context, fn, args, cache, signature) {
-	  var ret = fn.apply(context, args);
-	  cache[signature] = ret;
-	  return ret;
-	}
-
-	function metaForDescriptor(descriptor) {
-	  var fn = undefined,
-	      wrapKey = undefined;
-
-	  // This is ugly code, but way faster than other
-	  // ways I tried that *looked* pretty
-
-	  if (descriptor.value) {
-	    fn = descriptor.value;
-	    wrapKey = 'value';
-	  } else if (descriptor.get) {
-	    fn = descriptor.get;
-	    wrapKey = 'get';
-	  } else if (descriptor.set) {
-	    fn = descriptor.set;
-	    wrapKey = 'set';
-	  }
-
-	  return { fn: fn, wrapKey: wrapKey };
-	}
-
-	function handleDescriptor(target, key, descriptor) {
-	  console.warn('DEPRECATION: @memoize is deprecated and will be removed shortly. Use @decorate with lodash\'s memoize helper.\n\n  https://github.com/jayphelps/core-decorators.js#decorate');
-
-	  var _metaForDescriptor = metaForDescriptor(descriptor);
-
-	  var fn = _metaForDescriptor.fn;
-	  var wrapKey = _metaForDescriptor.wrapKey;
-
-	  var argumentCache = new WeakMap();
-	  var signatureCache = Object.create(null);
-	  var primativeRefCache = Object.create(null);
-	  var argumentIdCounter = 0;
-
-	  return _extends({}, descriptor, _defineProperty({}, wrapKey, function memoizeWrapper() {
-	    for (var _len = arguments.length, args = Array(_len), _key = 0; _key < _len; _key++) {
-	      args[_key] = arguments[_key];
-	    }
-
-	    var signature = '0';
-
-	    for (var i = 0, l = args.length; i < l; i++) {
-	      var arg = args[i];
-	      var argRef = toObject(primativeRefCache, arg);
-	      var argKey = argumentCache.get(argRef);
-
-	      if (argKey === undefined) {
-	        argKey = ++argumentIdCounter;
-	        argumentCache.set(argRef, argKey);
-	      }
-
-	      signature += argKey;
-	    }
-
-	    return signatureCache[signature] || applyAndCache(this, fn, arguments, signatureCache, signature);
-	  }));
-	}
-
-	function memoize() {
-	  for (var _len2 = arguments.length, args = Array(_len2), _key2 = 0; _key2 < _len2; _key2++) {
-	    args[_key2] = arguments[_key2];
-	  }
-
-	  return (0, _privateUtils.decorate)(handleDescriptor, args);
-	}
-
-	module.exports = exports['default'];
-
-/***/ },
-/* 16 */
-/***/ function(module, exports, __webpack_require__) {
-
-	'use strict';
-
-	Object.defineProperty(exports, '__esModule', {
-	  value: true
-	});
-	exports['default'] = autobind;
-
-	function _toConsumableArray(arr) { if (Array.isArray(arr)) { for (var i = 0, arr2 = Array(arr.length); i < arr.length; i++) arr2[i] = arr[i]; return arr2; } else { return Array.from(arr); } }
-
-	var _privateUtils = __webpack_require__(11);
-
-	var defineProperty = Object.defineProperty;
-	var getPrototypeOf = Object.getPrototypeOf;
-
-	function bind(fn, context) {
-	  if (fn.bind) {
-	    return fn.bind(context);
-	  } else {
-	    return function __autobind__() {
-	      return fn.apply(context, arguments);
-	    };
-	  }
-	}
-
-	var mapStore = undefined;
-
-	function getBoundSuper(obj, fn) {
-	  if (typeof WeakMap === 'undefined') {
-	    throw new Error('Using @autobind on ' + fn.name + '() requires WeakMap support due to its use of super.' + fn.name + '()\n      See https://github.com/jayphelps/core-decorators.js/issues/20');
-	  }
-
-	  if (!mapStore) {
-	    mapStore = new WeakMap();
-	  }
-
-	  if (mapStore.has(obj) === false) {
-	    mapStore.set(obj, new WeakMap());
-	  }
-
-	  var superStore = mapStore.get(obj);
-
-	  if (superStore.has(fn) === false) {
-	    superStore.set(fn, bind(fn, obj));
-	  }
-
-	  return superStore.get(fn);
-	}
-
-	function autobindClass(klass) {
-	  var descs = (0, _privateUtils.getOwnPropertyDescriptors)(klass.prototype);
-	  var keys = (0, _privateUtils.getOwnKeys)(descs);
-
-	  for (var i = 0, l = keys.length; i < l; i++) {
-	    var key = keys[i];
-	    var desc = descs[key];
-
-	    if (typeof desc.value !== 'function' || key === 'constructor') {
-	      continue;
-	    }
-
-	    defineProperty(klass.prototype, key, autobindMethod(klass.prototype, key, desc));
-	  }
-	}
-
-	function autobindMethod(target, key, _ref) {
-	  var fn = _ref.value;
-	  var configurable = _ref.configurable;
-	  var enumerable = _ref.enumerable;
-
-	  if (typeof fn !== 'function') {
-	    throw new SyntaxError('@autobind can only be used on functions, not: ' + fn);
-	  }
-
-	  var constructor = target.constructor;
-
-	  return {
-	    configurable: configurable,
-	    enumerable: enumerable,
-
-	    get: function get() {
-	      // Class.prototype.key lookup
-	      // Someone accesses the property directly on the prototype on which it is
-	      // actually defined on, i.e. Class.prototype.hasOwnProperty(key)
-	      if (this === target) {
-	        return fn;
-	      }
-
-	      // Class.prototype.key lookup
-	      // Someone accesses the property directly on a prototype but it was found
-	      // up the chain, not defined directly on it
-	      // i.e. Class.prototype.hasOwnProperty(key) == false && key in Class.prototype
-	      if (this.constructor !== constructor && getPrototypeOf(this).constructor === constructor) {
-	        return fn;
-	      }
-
-	      // Autobound method calling super.sameMethod() which is also autobound and so on.
-	      if (this.constructor !== constructor && key in this.constructor.prototype) {
-	        return getBoundSuper(this, fn);
-	      }
-
-	      var boundFn = bind(fn, this);
-
-	      defineProperty(this, key, {
-	        configurable: true,
-	        writable: true,
-	        // NOT enumerable when it's a bound method
-	        enumerable: false,
-	        value: boundFn
-	      });
-
-	      return boundFn;
-	    },
-	    set: (0, _privateUtils.createDefaultSetter)(key)
-	  };
-	}
-
-	function handle(args) {
-	  if (args.length === 1) {
-	    return autobindClass.apply(undefined, _toConsumableArray(args));
-	  } else {
-	    return autobindMethod.apply(undefined, _toConsumableArray(args));
-	  }
-	}
-
-	function autobind() {
-	  for (var _len = arguments.length, args = Array(_len), _key = 0; _key < _len; _key++) {
-	    args[_key] = arguments[_key];
-	  }
-
-	  if (args.length === 0) {
-	    return function () {
-	      return handle(arguments);
-	    };
-	  } else {
-	    return handle(args);
-	  }
-	}
-
-	module.exports = exports['default'];
-
-/***/ },
-/* 17 */
-/***/ function(module, exports, __webpack_require__) {
-
-	'use strict';
-
-	Object.defineProperty(exports, '__esModule', {
-	  value: true
-	});
-	exports['default'] = readonly;
-
-	var _privateUtils = __webpack_require__(11);
-
-	function handleDescriptor(target, key, descriptor) {
-	  descriptor.writable = false;
-	  return descriptor;
-	}
-
-	function readonly() {
-	  for (var _len = arguments.length, args = Array(_len), _key = 0; _key < _len; _key++) {
-	    args[_key] = arguments[_key];
-	  }
-
-	  return (0, _privateUtils.decorate)(handleDescriptor, args);
-	}
-
-	module.exports = exports['default'];
-
-/***/ },
-/* 18 */
-/***/ function(module, exports, __webpack_require__) {
-
-	'use strict';
-
-	Object.defineProperty(exports, '__esModule', {
-	  value: true
-	});
-	exports['default'] = enumerable;
-
-	var _privateUtils = __webpack_require__(11);
-
-	function handleDescriptor(target, key, descriptor) {
-	  descriptor.enumerable = true;
-	  return descriptor;
-	}
-
-	function enumerable() {
-	  for (var _len = arguments.length, args = Array(_len), _key = 0; _key < _len; _key++) {
-	    args[_key] = arguments[_key];
-	  }
-
-	  return (0, _privateUtils.decorate)(handleDescriptor, args);
-	}
-
-	module.exports = exports['default'];
-
-/***/ },
-/* 19 */
-/***/ function(module, exports, __webpack_require__) {
-
-	'use strict';
-
-	Object.defineProperty(exports, '__esModule', {
-	  value: true
-	});
-	exports['default'] = nonenumerable;
-
-	var _privateUtils = __webpack_require__(11);
-
-	function handleDescriptor(target, key, descriptor) {
-	  descriptor.enumerable = false;
-	  return descriptor;
-	}
-
-	function nonenumerable() {
-	  for (var _len = arguments.length, args = Array(_len), _key = 0; _key < _len; _key++) {
-	    args[_key] = arguments[_key];
-	  }
-
-	  return (0, _privateUtils.decorate)(handleDescriptor, args);
-	}
-
-	module.exports = exports['default'];
-
-/***/ },
-/* 20 */
-/***/ function(module, exports, __webpack_require__) {
-
-	'use strict';
-
-	Object.defineProperty(exports, '__esModule', {
-	  value: true
-	});
-	exports['default'] = nonconfigurable;
-
-	var _privateUtils = __webpack_require__(11);
-
-	function handleDescriptor(target, key, descriptor) {
-	  descriptor.configurable = false;
-	  return descriptor;
-	}
-
-	function nonconfigurable() {
-	  for (var _len = arguments.length, args = Array(_len), _key = 0; _key < _len; _key++) {
-	    args[_key] = arguments[_key];
-	  }
-
-	  return (0, _privateUtils.decorate)(handleDescriptor, args);
-	}
-
-	module.exports = exports['default'];
-
-/***/ },
-/* 21 */
-/***/ function(module, exports, __webpack_require__) {
-
-	'use strict';
-
-	Object.defineProperty(exports, '__esModule', {
-	  value: true
-	});
-
-	var _slicedToArray = (function () { function sliceIterator(arr, i) { var _arr = []; var _n = true; var _d = false; var _e = undefined; try { for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) { _arr.push(_s.value); if (i && _arr.length === i) break; } } catch (err) { _d = true; _e = err; } finally { try { if (!_n && _i['return']) _i['return'](); } finally { if (_d) throw _e; } } return _arr; } return function (arr, i) { if (Array.isArray(arr)) { return arr; } else if (Symbol.iterator in Object(arr)) { return sliceIterator(arr, i); } else { throw new TypeError('Invalid attempt to destructure non-iterable instance'); } }; })();
-
-	var _extends = Object.assign || function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; };
-
-	exports['default'] = debounce;
-
-	var _privateUtils = __webpack_require__(11);
-
-	var DEFAULT_TIMEOUT = 300;
-
-	function handleDescriptor(target, key, descriptor, _ref) {
-	  var _ref2 = _slicedToArray(_ref, 2);
-
-	  var _ref2$0 = _ref2[0];
-	  var wait = _ref2$0 === undefined ? DEFAULT_TIMEOUT : _ref2$0;
-	  var _ref2$1 = _ref2[1];
-	  var immediate = _ref2$1 === undefined ? false : _ref2$1;
-
-	  var callback = descriptor.value;
-
-	  if (typeof callback !== 'function') {
-	    throw new SyntaxError('Only functions can be debounced');
-	  }
-
-	  return _extends({}, descriptor, {
-	    value: function value() {
-	      var _this = this;
-
-	      var _metaFor = (0, _privateUtils.metaFor)(this);
-
-	      var debounceTimeoutIds = _metaFor.debounceTimeoutIds;
-
-	      var timeout = debounceTimeoutIds[key];
-	      var callNow = immediate && !timeout;
-	      var args = arguments;
-
-	      clearTimeout(timeout);
-
-	      debounceTimeoutIds[key] = setTimeout(function () {
-	        delete debounceTimeoutIds[key];
-	        if (!immediate) {
-	          callback.apply(_this, args);
-	        }
-	      }, wait);
-
-	      if (callNow) {
-	        callback.apply(this, args);
-	      }
-	    }
-	  });
-	}
-
-	function debounce() {
-	  for (var _len = arguments.length, args = Array(_len), _key = 0; _key < _len; _key++) {
-	    args[_key] = arguments[_key];
-	  }
-
-	  return (0, _privateUtils.decorate)(handleDescriptor, args);
-	}
-
-	module.exports = exports['default'];
-
-/***/ },
-/* 22 */
-/***/ function(module, exports, __webpack_require__) {
-
-	'use strict';
-
-	Object.defineProperty(exports, '__esModule', {
-	  value: true
-	});
-
-	var _slicedToArray = (function () { function sliceIterator(arr, i) { var _arr = []; var _n = true; var _d = false; var _e = undefined; try { for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) { _arr.push(_s.value); if (i && _arr.length === i) break; } } catch (err) { _d = true; _e = err; } finally { try { if (!_n && _i['return']) _i['return'](); } finally { if (_d) throw _e; } } return _arr; } return function (arr, i) { if (Array.isArray(arr)) { return arr; } else if (Symbol.iterator in Object(arr)) { return sliceIterator(arr, i); } else { throw new TypeError('Invalid attempt to destructure non-iterable instance'); } }; })();
-
-	var _extends = Object.assign || function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; };
-
-	exports['default'] = throttle;
-
-	var _privateUtils = __webpack_require__(11);
-
-	var DEFAULT_TIMEOUT = 300;
-
-	function handleDescriptor(target, key, descriptor, _ref) {
-	  var _ref2 = _slicedToArray(_ref, 2);
-
-	  var _ref2$0 = _ref2[0];
-	  var wait = _ref2$0 === undefined ? DEFAULT_TIMEOUT : _ref2$0;
-	  var _ref2$1 = _ref2[1];
-	  var options = _ref2$1 === undefined ? {} : _ref2$1;
-
-	  var callback = descriptor.value;
-
-	  if (typeof callback !== 'function') {
-	    throw new SyntaxError('Only functions can be throttled');
-	  }
-
-	  if (options.leading !== false) {
-	    options.leading = true;
-	  }
-
-	  if (options.trailing !== false) {
-	    options.trailing = true;
-	  }
-
-	  return _extends({}, descriptor, {
-	    value: function value() {
-	      var _this = this;
-
-	      var meta = (0, _privateUtils.metaFor)(this);
-	      var throttleTimeoutIds = meta.throttleTimeoutIds;
-	      var throttlePreviousTimestamps = meta.throttlePreviousTimestamps;
-
-	      var timeout = throttleTimeoutIds[key];
-	      // last execute timestamp
-	      var previous = throttlePreviousTimestamps[key] || 0;
-	      var now = Date.now();
-
-	      if (options.trailing) {
-	        meta.throttleTrailingArgs = arguments;
-	      }
-
-	      // if first be called and disable the execution on the leading edge
-	      // set last execute timestamp to now
-	      if (!previous && options.leading === false) {
-	        previous = now;
-	      }
-
-	      var remaining = wait - (now - previous);
-
-	      if (remaining <= 0) {
-	        clearTimeout(timeout);
-	        delete throttleTimeoutIds[key];
-	        throttlePreviousTimestamps[key] = now;
-	        callback.apply(this, arguments);
-	      } else if (!timeout && options.trailing) {
-	        throttleTimeoutIds[key] = setTimeout(function () {
-	          throttlePreviousTimestamps[key] = options.leading === false ? 0 : Date.now();
-	          delete throttleTimeoutIds[key];
-	          callback.apply(_this, meta.throttleTrailingArgs);
-	          // don't leak memory!
-	          meta.throttleTrailingArgs = null;
-	        }, remaining);
-	      }
-	    }
-	  });
-	}
-
-	function throttle() {
-	  for (var _len = arguments.length, args = Array(_len), _key = 0; _key < _len; _key++) {
-	    args[_key] = arguments[_key];
-	  }
-
-	  return (0, _privateUtils.decorate)(handleDescriptor, args);
-	}
-
-	module.exports = exports['default'];
-
-/***/ },
-/* 23 */
-/***/ function(module, exports, __webpack_require__) {
-
-	'use strict';
-
-	Object.defineProperty(exports, '__esModule', {
-	  value: true
-	});
-	exports['default'] = decorate;
-
-	function _toConsumableArray(arr) { if (Array.isArray(arr)) { for (var i = 0, arr2 = Array(arr.length); i < arr.length; i++) arr2[i] = arr[i]; return arr2; } else { return Array.from(arr); } }
-
-	function _toArray(arr) { return Array.isArray(arr) ? arr : Array.from(arr); }
-
-	var _privateUtils = __webpack_require__(11);
-
-	var defineProperty = Object.defineProperty;
-
-	function handleDescriptor(target, key, descriptor, _ref) {
-	  var _ref2 = _toArray(_ref);
-
-	  var decorator = _ref2[0];
-
-	  var args = _ref2.slice(1);
-
-	  var configurable = descriptor.configurable;
-	  var enumerable = descriptor.enumerable;
-	  var writable = descriptor.writable;
-
-	  var originalGet = descriptor.get;
-	  var originalSet = descriptor.set;
-	  var originalValue = descriptor.value;
-	  var isGetter = !!originalGet;
-
-	  return {
-	    configurable: configurable,
-	    enumerable: enumerable,
-	    get: function get() {
-	      var fn = isGetter ? originalGet.call(this) : originalValue;
-	      var value = decorator.call.apply(decorator, [this, fn].concat(_toConsumableArray(args)));
-
-	      if (isGetter) {
-	        return value;
-	      } else {
-	        var desc = {
-	          configurable: configurable,
-	          enumerable: enumerable
-	        };
-
-	        desc.value = value;
-	        desc.writable = writable;
-
-	        defineProperty(this, key, desc);
-
-	        return value;
-	      }
-	    },
-	    set: isGetter ? originalSet : (0, _privateUtils.createDefaultSetter)()
-	  };
-	}
-
-	function decorate() {
-	  for (var _len = arguments.length, args = Array(_len), _key = 0; _key < _len; _key++) {
-	    args[_key] = arguments[_key];
-	  }
-
-	  return (0, _privateUtils.decorate)(handleDescriptor, args);
-	}
-
-	module.exports = exports['default'];
-
-/***/ },
-/* 24 */
-/***/ function(module, exports, __webpack_require__) {
-
-	'use strict';
-
-	Object.defineProperty(exports, '__esModule', {
-	  value: true
-	});
-	exports['default'] = mixin;
-
-	var _privateUtils = __webpack_require__(11);
-
-	var defineProperty = Object.defineProperty;
-	var getPrototypeOf = Object.getPrototypeOf;
-
-	function buggySymbol(symbol) {
-	  return Object.prototype.toString.call(symbol) === '[object Symbol]' && typeof symbol === 'object';
-	}
-
-	function hasProperty(prop, obj) {
-	  // We have to traverse manually prototypes' chain for polyfilled ES6 Symbols
-	  // like "in" operator does.
-	  // I.e.: Babel 5 Symbol polyfill stores every created symbol in Object.prototype.
-	  // That's why we cannot use construction like "prop in obj" to check, if needed
-	  // prop actually exists in given object/prototypes' chain.
-	  if (buggySymbol(prop)) {
-	    do {
-	      if (obj === Object.prototype) {
-	        // Polyfill assigns undefined as value for stored symbol key.
-	        // We can assume in this special case if there is nothing assigned it doesn't exist.
-	        return typeof obj[prop] !== 'undefined';
-	      }
-	      if (obj.hasOwnProperty(prop)) {
-	        return true;
-	      }
-	    } while (obj = getPrototypeOf(obj));
-	    return false;
-	  } else {
-	    return prop in obj;
-	  }
-	}
-
-	function handleClass(target, mixins) {
-	  if (!mixins.length) {
-	    throw new SyntaxError('@mixin() class ' + target.name + ' requires at least one mixin as an argument');
-	  }
-
-	  for (var i = 0, l = mixins.length; i < l; i++) {
-	    var descs = (0, _privateUtils.getOwnPropertyDescriptors)(mixins[i]);
-	    var keys = (0, _privateUtils.getOwnKeys)(descs);
-
-	    for (var j = 0, k = keys.length; j < k; j++) {
-	      var key = keys[j];
-
-	      if (!hasProperty(key, target.prototype)) {
-	        defineProperty(target.prototype, key, descs[key]);
-	      }
-	    }
-	  }
-	}
-
-	function mixin() {
-	  for (var _len = arguments.length, mixins = Array(_len), _key = 0; _key < _len; _key++) {
-	    mixins[_key] = arguments[_key];
-	  }
-
-	  if (typeof mixins[0] === 'function') {
-	    return handleClass(mixins[0], []);
-	  } else {
-	    return function (target) {
-	      return handleClass(target, mixins);
-	    };
-	  }
-	}
-
-	module.exports = exports['default'];
-
-/***/ },
-/* 25 */
-/***/ function(module, exports, __webpack_require__) {
-
-	'use strict';
-
-	Object.defineProperty(exports, '__esModule', {
-	  value: true
-	});
-
-	var _slicedToArray = (function () { function sliceIterator(arr, i) { var _arr = []; var _n = true; var _d = false; var _e = undefined; try { for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) { _arr.push(_s.value); if (i && _arr.length === i) break; } } catch (err) { _d = true; _e = err; } finally { try { if (!_n && _i['return']) _i['return'](); } finally { if (_d) throw _e; } } return _arr; } return function (arr, i) { if (Array.isArray(arr)) { return arr; } else if (Symbol.iterator in Object(arr)) { return sliceIterator(arr, i); } else { throw new TypeError('Invalid attempt to destructure non-iterable instance'); } }; })();
-
-	var _extends = Object.assign || function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; };
-
-	exports['default'] = time;
-
-	var _privateUtils = __webpack_require__(11);
-
-	var labels = {};
-
-	// Exported for mocking in tests
-	var defaultConsole = {
-	  time: console.time ? console.time.bind(console) : function (label) {
-	    labels[label] = new Date();
-	  },
-	  timeEnd: console.timeEnd ? console.timeEnd.bind(console) : function (label) {
-	    var timeNow = new Date();
-	    var timeTaken = timeNow - labels[label];
-	    delete labels[label];
-	    console.log(label + ': ' + timeTaken + 'ms');
-	  }
-	};
-
-	exports.defaultConsole = defaultConsole;
-	var count = 0;
-
-	function handleDescriptor(target, key, descriptor, _ref) {
-	  var _ref2 = _slicedToArray(_ref, 2);
-
-	  var _ref2$0 = _ref2[0];
-	  var prefix = _ref2$0 === undefined ? null : _ref2$0;
-	  var _ref2$1 = _ref2[1];
-	  var console = _ref2$1 === undefined ? defaultConsole : _ref2$1;
-
-	  var fn = descriptor.value;
-
-	  if (prefix === null) {
-	    prefix = target.constructor.name + '.' + key;
-	  }
-
-	  if (typeof fn !== 'function') {
-	    throw new SyntaxError('@time can only be used on functions, not: ' + fn);
-	  }
-
-	  return _extends({}, descriptor, {
-	    value: function value() {
-	      var label = prefix + '-' + count;
-	      count++;
-	      console.time(label);
-
-	      try {
-	        return fn.apply(this, arguments);
-	      } finally {
-	        console.timeEnd(label);
-	      }
-	    }
-	  });
-	}
-
-	function time() {
-	  for (var _len = arguments.length, args = Array(_len), _key = 0; _key < _len; _key++) {
-	    args[_key] = arguments[_key];
-	  }
-
-	  return (0, _privateUtils.decorate)(handleDescriptor, args);
-	}
-
-/***/ },
-/* 26 */
-/***/ function(module, exports, __webpack_require__) {
-
-	'use strict';
-
-	Object.defineProperty(exports, '__esModule', {
-	  value: true
-	});
-
-	var _extends = Object.assign || function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; };
-
-	exports['default'] = extendDescriptor;
-
-	var _privateUtils = __webpack_require__(11);
-
-	var getPrototypeOf = Object.getPrototypeOf;
-	var getOwnPropertyDescriptor = Object.getOwnPropertyDescriptor;
-
-	function handleDescriptor(target, key, descriptor) {
-	  var superKlass = getPrototypeOf(target);
-	  var superDesc = getOwnPropertyDescriptor(superKlass, key);
-
-	  return _extends({}, superDesc, {
-	    value: descriptor.value,
-	    initializer: descriptor.initializer,
-	    get: descriptor.get || superDesc.get,
-	    set: descriptor.set || superDesc.set
-	  });
-	}
-
-	function extendDescriptor() {
-	  for (var _len = arguments.length, args = Array(_len), _key = 0; _key < _len; _key++) {
-	    args[_key] = arguments[_key];
-	  }
-
-	  return (0, _privateUtils.decorate)(handleDescriptor, args);
-	}
-
-	module.exports = exports['default'];
-
-/***/ },
-/* 27 */
 /***/ function(module, exports) {
 
 	"use strict";
 
 	Object.defineProperty(exports, "__esModule", {
-	  value: true
+	    value: true
 	});
-	exports["default"] = applyDecorators;
-	var defineProperty = Object.defineProperty;
-	var getOwnPropertyDescriptor = Object.getOwnPropertyDescriptor;
 
-	function applyDecorators(Class, props) {
-	  var prototype = Class.prototype;
+	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
-	  for (var key in props) {
-	    var decorators = props[key];
+	var AddrObj = function AddrObj(opt) {
+	    _classCallCheck(this, AddrObj);
 
-	    for (var i = 0, l = decorators.length; i < l; i++) {
-	      var decorator = decorators[i];
+	    this.name = opt.name || "";
+	};
 
-	      defineProperty(prototype, key, decorator(prototype, key, getOwnPropertyDescriptor(prototype, key)));
-	    }
-	  }
-
-	  return Class;
-	}
-
-	module.exports = exports["default"];
+	exports.default = AddrObj;
 
 /***/ }
 /******/ ])

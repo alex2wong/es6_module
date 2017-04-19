@@ -4,26 +4,65 @@ const CURSOR_RANGE = 1000;
 export default class lgSelect {
     constructor(opt) {
         this.filterStr = "";
+        // actually here should defineProperty filteredOptions !! to watch the change.
         this.filteredOptions = [];
         this.dropOpen = false;
         this.cursor = 0;
         this.dropMenu = null;
+        this.selectInput = null;
+        this.selectBtn = null;
         this.selected = {};
         this.options = opt.options || [];
 
         console.log("ngInit...");
-        this.selected.name = opt.title || "select option";
-        this.dropMenu = document.querySelector(".dropdown-menu");
-        // filter 1000 elements to fill in dropMenu.
-        this.bindDOM();
+        this.selected.name = opt.title || "select option";        
+        // filter 1000 elements to fill in dropMenu.        
         this.filterAO();
+        this.bindDOM();
     }
 
     /** implement universe data-bind Directive.. */
     bindDOM() {
         let selectBtn = document.querySelector(".lg-select");
-        if (selectBtn)
-            selectBtn.innerHTML = this.selected.name + selectBtn.innerHTML;        
+        let selectInput = document.querySelector("#selectInput");
+        let selectContainer = document.querySelector("#container");
+
+        let dropMenu = document.createElement("ul");
+        dropMenu.className = "dropdown-menu";
+        selectBtn.parentElement.appendChild(dropMenu);
+        this.dropMenu = dropMenu;
+        this.selectInput = selectInput;
+        this.selectBtn = selectBtn;
+
+        if (selectBtn && selectInput && selectContainer && dropMenu) {
+            selectBtn.addEventListener("click", this.wrapHandler(this, this.toggleDropdown));
+            selectInput.onblur = this.wrapHandler(this,this.searchAO);
+            selectContainer.addEventListener("click", this.wrapHandler(this, this.hideDropdown));
+            dropMenu.onclick = this.wrapHandler(this, this.selectAO);
+            dropMenu.onscroll = this.wrapHandler(this, this.scrollListener);
+        } else {
+            console.error("bindDom error.");
+        }
+        this.updateDOM();
+    }
+
+    wrapHandler(ctx, func) {
+        return func.bind(ctx);
+    }
+
+    /**
+     * tranverse component DOM ele, and update the DOM value..
+     */
+    updateDOM() {
+        // generate li depend on this.options... bind span innerText with *.name
+        let itemsHtml = "";
+        for(let i=0; i<this.filteredOptions.length;i++) {
+            if (this.filteredOptions[i].name) {
+                itemsHtml += "<li><span>" + this.filteredOptions[i].name + "</span></li>";
+            }
+        }
+        this.dropMenu.innerHTML = itemsHtml;
+        this.selectBtn.innerHTML = this.selected.name + "<span class=\"caret\"></span>"
     }
 
     getSelected () {
@@ -49,9 +88,11 @@ export default class lgSelect {
     // keyUp listener.
     searchAO (evt) {
         var _this = this;
+        this.filterStr = this.selectInput.value;
         if (this.filterStr.length === 0) {
             this.cursor = 0;
             this.filterAO();
+            this.updateDOM();
             return;
         }
         try {
@@ -63,6 +104,7 @@ export default class lgSelect {
                 }
             }
             this.filteredOptions = tempAOs;
+            this.updateDOM();
             setTimeout(() => {
                 _this.openDropdown();
             }, 200);
@@ -73,10 +115,14 @@ export default class lgSelect {
         }
     };
     // selectAO by click AO list-item.
-    selectAO (evt, ao) {
-        if (ao) {
-            this.selected = ao;
-            console.warn("selected AO: " + ao.name);
+    selectAO (evt) {
+        let target = evt.target ||evt.srcElement;
+        if (target.tagName && target.tagName === "LI") {
+            this.selected = {
+                'name': target.innerText,
+            };
+            console.warn("selected AO: " + target.innerText);
+            this.updateDOM();
             return;
         }
         else {
@@ -91,6 +137,7 @@ export default class lgSelect {
             // this.throttle(this.loadMoreAO, 300);
             setTimeout(() => {
                 _this.loadMoreAO();
+                this.updateDOM();
             }, 300);
         }
     };

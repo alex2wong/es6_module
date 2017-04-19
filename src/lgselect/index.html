@@ -8,31 +8,39 @@
       <script src="../../dist/bundle.js"></script>
     </head>
     <body>
-        <div onClick="hideDropdown()">
-        <input aModel="filterStr" placeholder="keyword to search" onBlur="searchAO()">
-        <div class="dropdown-container">
-            <!--click dropdown to toggle the dropdown-menu display-->
-            <a href="javascript:void(0)" aModel="select.name" class="lg-select" data-toggle="dropdown" onClick="toggleDropdown()">
-                <span class="caret"></span>
-            </a>
-            <ul class="dropdown-menu" onScroll="scrollListener()">
-                <!--<li *ngIf="filteredAddrObjs.length==0">No addrobj</li>-->
-                <li onClick="selectAO(this)">
-                        <span> item name </span>
-                    </li> 
-                </ul>
-            <div>
+        <h3>Large List (select) DEMO</h3>
+        <div id="container">
+            <input aModel="filterStr" placeholder="keyword to search" id="selectInput">
+            <div class="dropdown-container">
+                <!--click dropdown to toggle the dropdown-menu display-->
+                <a href="javascript:void(0)" aModel="select.name" class="lg-select" data-toggle="dropdown">
+                </a>
+            <div></div>
+        </div>
+        <hr>
+        <h3>Guide</h3>
+        <div>
+            There are over 20000 options in the large list, <br>
+            which apply pagenation to promote performance. <br><br>
+            Actually, chrome render select options before we select, <br>
+            but firefox render the select after we click select. <br>
+            This larget list component is meant to pollyfill the diff.
         </div>        
-        <script>
+    </body>
+    <script>
+         var testObjs = []
+         for(var j = 0; j< 25600; j ++) {
+             testObjs.push({
+                 'name': "test" + j,
+             });
+         }
          if (Alex.lgSelect) {
              var select = new Alex.lgSelect({
-                options: [{'name': 'test11'}, {'name': 'test22'}],
-                title: "Select AddrObjs",
+                options: testObjs,
+                title: "Select AO", 
             });
          } else {
              console.error("lgSelect component not exist.");
-         }         
-        </script>
-       
-    </body>
+         }
+    </script>
 </html>
