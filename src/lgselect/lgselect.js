@@ -13,6 +13,8 @@ export default class lgSelect {
         this.selectBtn = null;
         this.selected = {};
         this.options = opt.options || [];
+        this.container = opt.containerId;
+        this.dropdownContainer = null;
 
         console.log("ngInit...");
         this.selected.name = opt.title || "select option";        
@@ -23,13 +25,29 @@ export default class lgSelect {
 
     /** implement universe data-bind Directive.. */
     bindDOM() {
-        let selectBtn = document.querySelector(".lg-select");
-        let selectInput = document.querySelector("#selectInput");
-        let selectContainer = document.querySelector("#container");
+        let selectBtn = document.createElement("a");
+        selectBtn.className = "lg-select";
+        selectBtn.href = "javascript:void(0)";
+        let selectInput = document.createElement("input");
+        selectInput.placeholder = "keyword to search";
+        let dropdownContainer = document.createElement("div");
+        dropdownContainer.className = "dropdown-container";
+        dropdownContainer.appendChild(selectBtn);        
+
+        let selectContainer = null;
+        if (this.container && document.querySelector("#" + this.container)) {
+            selectContainer = document.querySelector("#" + this.container);
+        } else {
+            console.error("Given containerId not correct.");
+            return;
+        }
+        selectContainer.appendChild(selectInput);
+        selectContainer.appendChild(dropdownContainer);
 
         let dropMenu = document.createElement("ul");
         dropMenu.className = "dropdown-menu";
-        selectBtn.parentElement.appendChild(dropMenu);
+        dropdownContainer.appendChild(dropMenu);
+        this.dropdownContainer = dropdownContainer;
         this.dropMenu = dropMenu;
         this.selectInput = selectInput;
         this.selectBtn = selectBtn;
@@ -37,6 +55,7 @@ export default class lgSelect {
         if (selectBtn && selectInput && selectContainer && dropMenu) {
             selectBtn.addEventListener("click", this.wrapHandler(this, this.toggleDropdown));
             selectInput.onblur = this.wrapHandler(this,this.searchAO);
+            selectInput.onkeyup = this.wrapHandler(this,this.searchAO);
             selectContainer.addEventListener("click", this.wrapHandler(this, this.hideDropdown));
             dropMenu.onclick = this.wrapHandler(this, this.selectAO);
             dropMenu.onscroll = this.wrapHandler(this, this.scrollListener);
@@ -58,7 +77,7 @@ export default class lgSelect {
         let itemsHtml = "";
         for(let i=0; i<this.filteredOptions.length;i++) {
             if (this.filteredOptions[i].name) {
-                itemsHtml += "<li><span>" + this.filteredOptions[i].name + "</span></li>";
+                itemsHtml += "<li>" + this.filteredOptions[i].name + "</li>";
             }
         }
         this.dropMenu.innerHTML = itemsHtml;
@@ -88,6 +107,8 @@ export default class lgSelect {
     // keyUp listener.
     searchAO (evt) {
         var _this = this;
+        if (evt.keyCode == 13 || evt.type == "blur") {}
+        else return;
         this.filterStr = this.selectInput.value;
         if (this.filterStr.length === 0) {
             this.cursor = 0;
@@ -123,6 +144,7 @@ export default class lgSelect {
             };
             console.warn("selected AO: " + target.innerText);
             this.updateDOM();
+            this.hideDropdown();
             return;
         }
         else {
@@ -187,8 +209,7 @@ export default class lgSelect {
     };
     hideDropdown (evt) {
         // hide the dropMenu
-        var dropdownContainer = document.querySelector(".dropdown-container");
-        dropdownContainer.className = "dropdown-container";
+        this.dropdownContainer.className = "dropdown-container";
         this.dropOpen = false;
     };
 }

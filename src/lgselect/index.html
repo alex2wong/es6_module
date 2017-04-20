@@ -10,13 +10,12 @@
     <body>
         <h3>Large List (select) DEMO</h3>
         <div id="container">
-            <input aModel="filterStr" placeholder="keyword to search" id="selectInput">
+            <!--<input aModel="filterStr" placeholder="keyword to search" id="selectInput">
             <div class="dropdown-container">
-                <!--click dropdown to toggle the dropdown-menu display-->
                 <a href="javascript:void(0)" aModel="select.name" class="lg-select" data-toggle="dropdown">
                 </a>
-            <div></div>
-        </div>
+            <div></div>-->
+        </div>        
         <hr>
         <h3>Guide</h3>
         <div>
@@ -25,7 +24,10 @@
             Actually, chrome render select options before we select, <br>
             but firefox render the select after we click select. <br>
             This larget list component is meant to pollyfill the diff.
-        </div>        
+        </div> 
+        <br>
+        <div id="container2">
+        </div>       
     </body>
     <script>
          var testObjs = []
@@ -34,11 +36,18 @@
                  'name': "test" + j,
              });
          }
-         if (Alex.lgSelect) {
-             var select = new Alex.lgSelect({
+         if (swl.lgSelect) {
+             var select = new swl.lgSelect({
                 options: testObjs,
                 title: "Select AO", 
+                containerId: "container",
             });
+            var select2 = new swl.lgSelect({
+                options: testObjs,
+                title: "Select AO2", 
+                containerId: "container2",
+            });
+            
          } else {
              console.error("lgSelect component not exist.");
          }
