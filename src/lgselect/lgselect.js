@@ -1,5 +1,25 @@
 import { AddrObj } from './addrObj';
 
+
+/**
+ * @param fn {Function}
+ * @param delay {Number}
+ * @return {Function}
+ */
+function debounce(fn, delay) {
+    let timer;
+    // timer is closure in mem.. returned function is the listener..
+    return function() {
+        var context = this;
+        var args = arguments;
+        // clear the previous timer to prevent the function call.
+        clearTimeout(timer);
+        timer = setTimeout(() => {
+            fn.apply(context, args)
+        }, delay);
+    }
+}
+
 const CURSOR_RANGE = 1000;
 export default class lgSelect {
     constructor(opt) {
@@ -55,10 +75,10 @@ export default class lgSelect {
         if (selectBtn && selectInput && selectContainer && dropMenu) {
             selectBtn.addEventListener("click", this.wrapHandler(this, this.toggleDropdown));
             selectInput.onblur = this.wrapHandler(this,this.searchAO);
-            selectInput.onkeyup = this.wrapHandler(this,this.searchAO);
+            selectInput.onkeyup = this.wrapHandler(this, debounce(this.searchAO, 200));
             selectContainer.addEventListener("click", this.wrapHandler(this, this.hideDropdown));
             dropMenu.onclick = this.wrapHandler(this, this.selectAO);
-            dropMenu.onscroll = this.wrapHandler(this, this.scrollListener);
+            dropMenu.onscroll = this.wrapHandler(this, debounce(this.scrollListener, 200));
         } else {
             console.error("bindDom error.");
         }
