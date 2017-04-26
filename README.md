@@ -8,6 +8,20 @@
 4. 用http-server 这样的静态文件服务器或者 python 自带的server跑起来
 5. 打开127.0.0.1:8080或者你指定的端口，看看Drone模块和 LowPoly模块效果
 
+## 最近更新：largeSelect 组件
+最近完成了一个小组件开发，基于这么个需求：
+
+> 在Chrome和Firefox中原生的select 下拉菜单实现机制不同，Chrome在select添加options的时候就进行渲染（此时UI会处于卡顿状态），Firefox在select下拉的时候才会临时渲染。如果在下拉菜单中有几千上万条记录的时候Chrome会在加载页面时卡顿，Firefox会在下拉时卡顿。
+
+So，为了获得良好的用户体验和Pollyfill浏览器之间的行为差异，需要重写一个select组件，包含以下功能：
+
+- 对options分页，滑动到底部自动翻页
+- 提供option内容检索
+- 可绑定至任意DOM元素
+- 控制滚动翻页的响应频率（debounce）
+
+[在线体验](https://alex2wong.github.io/es6_module/src/lgselect/)
+
 ## 附件（基于angular-cli Worktile仿制版）
 本仓库挂载了不断更新的 WorkTile 仿制版本. **基于Angular2.x** 和自制样式。
 访问在线版 [DEMO](http://123.206.201.245:3000/)，主要技术点：
