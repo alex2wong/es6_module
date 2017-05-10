@@ -4,6 +4,7 @@ function MultiCanvas (options){
     this.imageType = options.imageType || "png";
     this.images = options.imageSuffix || [];
     this.canvs = [];
+    this.imgloaded = 0;
     // HtmlCanvasElement instances..
     this.layers = [];
     this.focusRange = options.focusRange || document.createElement("input");
@@ -17,7 +18,7 @@ MultiCanvas.prototype._init = function() {
     for (var k in this.images) {
         var canv = document.createElement("canvas");
         this.canvs.push(canv);
-        this.drawImg(this.imagePref + this.images[k] + '.' + this.imageType, canv);
+        this.drawImg(this.imagePref + this.images[k] + '.' + this.imageType, canv, canvContainer);
         canvContainer.appendChild(canv);
         this.focusRange.max = k;
     }
@@ -50,7 +51,7 @@ MultiCanvas.prototype.focusLayer = function(layerId) {
             if (layerId === i) {
                 this.canvs[i].style.filter = "blur(0)";
             } else {
-                this.canvs[i].style.filter = "blur("+ 3 * Math.abs(layerId-i) +"px)";
+                this.canvs[i].style.filter = "blur("+ 4 * Math.abs(layerId-i) +"px)";
             }
         }
     } else {
@@ -60,13 +61,22 @@ MultiCanvas.prototype.focusLayer = function(layerId) {
     }
 }
 
-/* input imgs,  */
-MultiCanvas.prototype.drawImg = function(imgPath, canvas) {
+/* input imgs, lastImg does not indicate the real network response series..
+ * it just indicate the callback.
+ */
+MultiCanvas.prototype.drawImg = function(imgPath, canvas, canvContainer) {
     var img = new Image();
+    var that = this;
     img.onload = function(evt) {
+        // data response..
+        that.imgloaded += 1
         canvas.width = img.width;
         canvas.height = img.height;
         canvas.getContext("2d").drawImage(img, 0, 0);
+        if (that.imgloaded === that.images.length && canvContainer) {
+            canvContainer.style.opacity = 1;
+        }
     }
+    // send request..
     img.src = imgPath;
 }
