@@ -75,6 +75,7 @@ MultiCanvas.prototype.drawImg = function(imgPath, canvas, canvContainer) {
         canvas.getContext("2d").drawImage(img, 0, 0);
         if (that.imgloaded === that.images.length && canvContainer) {
             canvContainer.style.opacity = 1;
+            canvContainer.style.height = img.height + 'px';
         }
     }
     // send request..

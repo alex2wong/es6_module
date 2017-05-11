@@ -32,6 +32,7 @@ export default class lgSelect {
         this.selectInput = null;
         this.selectBtn = null;
         this.selected = {};
+        this.preOptions = opt.preOptions || [];
         this.options = opt.options || [];
         this.container = opt.containerId;
         this.dropdownContainer = null;
@@ -95,6 +96,11 @@ export default class lgSelect {
     updateDOM() {
         // generate li depend on this.options... bind span innerText with *.name
         let itemsHtml = "";
+        if (this.preOptions.length) {
+            for(let opt in this.preOptions) {
+                itemsHtml += "<li value='"+ opt.value +"'>" + opt.name + "</li>";
+            }
+        }     
         for(let i=0; i<this.filteredOptions.length;i++) {
             if (this.filteredOptions[i].name) {
                 itemsHtml += "<li>" + this.filteredOptions[i].name + "</li>";
@@ -155,6 +161,14 @@ export default class lgSelect {
             console.error("something happen when search AO");
         }
     };
+
+    /**
+     * check for target value..if it is _create/spliter
+     */
+    // checkForAoPopup(target) {
+    //     target
+    // }
+
     // selectAO by click AO list-item.
     selectAO (evt) {
         let target = evt.target ||evt.srcElement;

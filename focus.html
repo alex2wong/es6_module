@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Multi-Canvas DEMO</title>
+    <style>
+    html, body {
+        height: 100%;
+        width: 100%;
+        margin: 10px;
+        overflow: hidden;
+        color: #222;
+        font-size: 15px;
+        letter-spacing: 1.5px;
+        line-height: 1.5em;
+    }
+    * {
+        box-sizing: border-box;
+    }
+    canvas {
+        background: transparent;
+        position: absolute;
+        transition: filter .5s;
+    }
+
+    #canvContainer {
+        position: relative;
+        height: 500px;
+        opacity: 0;
+        transition: opacity .8s;
+    }
+    #focusRange {
+        width: 300px;
+    }
+    </style>
+
+</head>
+<body>
+    <script type="text/javascript" src="src/multicanvas.js"></script>
+    <div id="canvContainer">        
+    </div>
+    <label for="focusRange" id="focusLabel"></label><br>
+    <input type="range" name="focusRange" id="focusRange" min="0" max="10" value="0">
+    <script type="text/javascript">
+        var range = document.querySelector("#focusRange");
+        var label = document.querySelector("#focusLabel");
+        var mcanv = new MultiCanvas({
+            'images': 'assets/MultiCanvas_',
+            'imageSuffix': [4,3,2,1],
+            'imageType': 'png',
+            'focusRange': range,
+            'focusLabel': label,
+        });
+    </script>
+</body>

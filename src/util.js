@@ -94,5 +94,24 @@ export default class util {
             return oldValue.apply(null, arguments);
         }
     }
+
+    /**
+     * @param fn {Function}
+     * @param delay {Number}
+     * @return {Function}
+     */
+    static debounce(fn, delay) {
+        let timer;
+        // timer is closure in mem.. returned function is the listener..
+        return function() {
+            var context = this;
+            var args = arguments;
+            // clear the previous timer to prevent the function call.
+            clearTimeout(timer);
+            timer = setTimeout(() => {
+                fn.apply(context, args)
+            }, delay);
+        }
+    }
     
 }
