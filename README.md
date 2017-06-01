@@ -41,6 +41,7 @@ var mcanv = new MultiCanvas({
 // focusLabel: HtmlElement label控件用于显示当前的对焦图层。
 ```
 ![效果图](https://github.com/alex2wong/es6_module/blob/master/assets/ss.jpg?raw=true)
+
 [DEMO地址](https://alex2wong.github.io/es6_module/focus.html)
 
 
