@@ -22,6 +22,28 @@ So，为了获得良好的用户体验和Pollyfill浏览器之间的行为差异
 
 [在线体验](https://alex2wong.github.io/es6_module/src/lgselect/)
 
+## 更新，multicanvas 组件
+基于多个canvas模拟对焦的组件，受PS多图层启发。
+首先你需要把一个场景分割为不同景深的部分，就像assets 文件夹中的multicanvas*.png，之后就可以通过这个组件直接模拟前后景深的变化
+```
+var mcanv = new MultiCanvas({
+    'images': 'assets/MultiCanvas_',
+    'imageSuffix': [4,3,2,1],
+    'imageType': 'png',
+    'focusRange': range,
+    'focusLabel': label,
+});
+// MultiCanvas 类配置所需参数:
+// images: String 图片资源的地址前缀
+// imageSuffix: Array 图片资源的后缀
+// imageType: String 默认png
+// focusRange: HtmlElement input[type='range']控件
+// focusLabel: HtmlElement label控件用于显示当前的对焦图层。
+```
+![效果图](https://github.com/alex2wong/es6_module/blob/master/assets/ss.jpg?raw=true)
+[DEMO地址](https://alex2wong.github.io/es6_module/focus.html)
+
+
 ## 附件（基于angular-cli Worktile仿制版）
 本仓库挂载了不断更新的 WorkTile 仿制版本. **基于Angular2.x** 和自制样式。
 访问在线版 [DEMO](http://123.206.201.245:3000/)，主要技术点：
