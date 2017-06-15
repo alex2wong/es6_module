@@ -17,10 +17,26 @@ So，为了获得良好的用户体验和Pollyfill浏览器之间的行为差异
 
 - 对options分页，滑动到底部自动翻页
 - 提供option内容检索
-- 可绑定至任意DOM元素
+- 可绑定至块级DOM元素
 - 控制滚动翻页的响应频率（debounce）
 
-[在线体验](https://alex2wong.github.io/es6_module/src/lgselect/)
+使用方法（How to use）：
+```
+for(var j = 0; j< 25600; j ++) {
+    testObjs.push({
+        'name': "test" + j,
+    });
+}
+
+var select = new swl.lgSelect({
+    options: testObjs,
+    title: "Select AO", 
+    containerId: "container", // domID 
+    pagesize: 50,
+});
+
+```
+[在线体验 DEMO for large select](https://alex2wong.github.io/es6_module/src/lgselect/)
 
 ## 更新，multicanvas 组件
 基于多个canvas模拟对焦的组件，受PS多图层启发。

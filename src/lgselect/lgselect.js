@@ -20,7 +20,6 @@ function debounce(fn, delay) {
     }
 }
 
-const CURSOR_RANGE = 1000;
 export default class lgSelect {
     constructor(opt) {
         this.filterStr = "";
@@ -33,10 +32,11 @@ export default class lgSelect {
         this.selectBtn = null;
         this.selected = {};
         this.preOptions = opt.preOptions || [];
-        this.options = opt.options || [];
+        this.options = opt.options || [];        
         this.container = opt.containerId;
         this.dropdownContainer = null;
 
+        this.CURSOR_RANGE = opt.pagesize || 100;
         console.log("ngInit...");
         this.selected.name = opt.title || "select option";        
         // filter 1000 elements to fill in dropMenu.        
@@ -50,6 +50,7 @@ export default class lgSelect {
         selectBtn.className = "lg-select";
         selectBtn.href = "javascript:void(0)";
         let selectInput = document.createElement("input");
+        selectInput.type = "search";
         selectInput.placeholder = "keyword to search";
         let dropdownContainer = document.createElement("div");
         dropdownContainer.className = "dropdown-container";
@@ -76,10 +77,10 @@ export default class lgSelect {
         if (selectBtn && selectInput && selectContainer && dropMenu) {
             selectBtn.addEventListener("click", this.wrapHandler(this, this.toggleDropdown));
             selectInput.onblur = this.wrapHandler(this,this.searchAO);
-            selectInput.onkeyup = this.wrapHandler(this, debounce(this.searchAO, 200));
+            selectInput.onkeyup = this.wrapHandler(this, debounce(this.searchAO, 300));
             selectContainer.addEventListener("click", this.wrapHandler(this, this.hideDropdown));
             dropMenu.onclick = this.wrapHandler(this, this.selectAO);
-            dropMenu.onscroll = this.wrapHandler(this, debounce(this.scrollListener, 200));
+            dropMenu.onscroll = this.wrapHandler(this, debounce(this.scrollListener, 300));
         } else {
             console.error("bindDom error.");
         }
@@ -123,7 +124,7 @@ export default class lgSelect {
             if (this.cursor < 0 || this.cursor > this.options.length)
                 return;
             // #issue to address: slice safe
-            this.filteredOptions = this.options.slice(this.cursor, this.cursor + CURSOR_RANGE);
+            this.filteredOptions = this.options.slice(this.cursor, this.cursor + this.CURSOR_RANGE);
             console.log("filtering addrobjs to promote performance..");
         }
         catch (error) {
@@ -133,8 +134,9 @@ export default class lgSelect {
     // keyUp listener.
     searchAO (evt) {
         var _this = this;
+        // enter or blur would filter items then OpenDropDown, other key would do nothing.
         if (evt.keyCode == 13 || evt.type == "blur") {}
-        else return;
+        // else return;
         this.filterStr = this.selectInput.value;
         if (this.filterStr.length === 0) {
             this.cursor = 0;
@@ -154,7 +156,7 @@ export default class lgSelect {
             this.updateDOM();
             setTimeout(() => {
                 _this.openDropdown();
-            }, 200);
+            }, 50);
             console.warn("search keyword is: " + this.filterStr, " search res num: " + tempAOs.length);
         }
         catch (error) {
@@ -191,23 +193,23 @@ export default class lgSelect {
         if (this.filterStr.length == 0) {
             // cooling time 300ms for scrollListener.
             // this.throttle(this.loadMoreAO, 300);
-            setTimeout(() => {
+            // setTimeout(() => {
                 _this.loadMoreAO();
                 this.updateDOM();
-            }, 300);
+            // }, 0);
         }
     };
     // if function called as eventListener !! `this` means the Element which trigger evt ??
     loadMoreAO () {
         // console.warn("when handling wheel evt, `this` means " + this);
-        if ((this.dropMenu.scrollHeight - this.dropMenu.scrollTop) < 211 && this.cursor < (this.options.length - CURSOR_RANGE)) {
+        if ((this.dropMenu.scrollHeight - this.dropMenu.scrollTop) < 211 && this.cursor < (this.options.length - this.CURSOR_RANGE)) {
             // scroll to next page.
-            this.cursor += CURSOR_RANGE;
+            this.cursor += this.CURSOR_RANGE;
             this.filterAO();
             this.dropMenu.scrollTop = 1;
         }
-        else if (this.dropMenu.scrollTop < 1 && this.cursor > (CURSOR_RANGE - 1)) {
-            this.cursor -= CURSOR_RANGE;
+        else if (this.dropMenu.scrollTop < 1 && this.cursor > (this.CURSOR_RANGE - 1)) {
+            this.cursor -= this.CURSOR_RANGE;
             this.filterAO();
             this.dropMenu.scrollTop = this.dropMenu.scrollHeight * 0.95;
         }

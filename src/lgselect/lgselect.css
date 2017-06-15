@@ -21,7 +21,8 @@ a:hover {
 
 input {
     padding: 6px;
-    /*border-radius: 4px;*/
+    max-width: 150px;
+    border-radius: 3px;
 }
 
 .lg-select {
