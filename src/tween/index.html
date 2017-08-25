@@ -1,0 +1,67 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title> Test Async Animation </title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+<body style="width:100%;height:100%;background:#2C3E50;">
+    <h4>Test Async Animation </h4>
+    <script type="text/javascript" src="myTween.js"></script>
+    <script >
+        let objs = [{
+            lon: 121.11,
+            lat: 30.21,
+            text: 'This is Year 1991',
+        }];
+
+        let targets = [{
+            lon: 126.11,
+            lat: 30.21,
+            text: 'This is Year 1992',
+        }];
+
+        let targets2 = [{
+            lon: 122.11,
+            lat: 30.21,
+            text: 'This is Year 1993',
+        }]
+
+        let targets3 = [{
+            lon: 118.11,
+            lat: 30.21,
+            text: 'This is Year 1994',
+        }]
+
+        const duration = 4000;
+        // Scene Animation Start
+        (async ()=>{
+            Alex.myTween.fps = 5;
+            // global objs have been changed .. by myTween.to() ??
+            Alex.myTween.get(objs);
+            await Alex.myTween.to(targets, duration, function(){
+                console.log(Alex.myTween.objs[0].lon);
+            });
+            // simply setTimeout.. 
+            await Alex.myTween.wait(function(){
+                console.log("This is end of Year 1991");
+            }, 1000);
+
+            await Alex.myTween.get(targets).to(targets2, duration, function(){
+                console.log("After wait.., " + Alex.myTween.objs[0].lon);
+            });
+
+            await Alex.myTween.wait(function(){
+                console.log("This is end of Year 1992");
+            }, 1000);
+
+            await Alex.myTween.get(targets2).to(targets3, duration, function(){
+                console.log("After wait.., " + Alex.myTween.objs[0].lon);
+            });
+
+            await Alex.myTween.wait(function(){
+                console.log("This is end of Year 1993");
+            }, 1000);
+        })();
+    </script>
+</html>
