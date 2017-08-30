@@ -175,6 +175,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	                        myTween.timer = setInterval(animation, inter);
 	                        myTween.timerOn = true;
 	                        myTween.paused = false;
+	                        // this step is to sleep for animation duration..
 	                        setTimeout(resolve, duration);
 	                    })
 	                };

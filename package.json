@@ -30,8 +30,9 @@
     "wp": "webpack && npm run server"
   },
   "keywords": [
-    "lowpoly",
-    "es6"
+    "Babel",
+    "ES6",
+    "Webpack"
   ],
   "author": "alex",
   "license": "ISC"

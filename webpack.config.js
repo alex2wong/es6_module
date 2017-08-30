@@ -1,12 +1,12 @@
 module.exports = {
     entry: {
         index: [
-            "./src/async/index.js"
+            "./src/index.js"
             ]
     },
     output: {
-        path: "./dist/",
-        filename: "myTween.js",
+        path: "./dist",
+        filename: "bundle.js",
 	    library: 'Alex',
         libraryTarget: 'umd',
     },
