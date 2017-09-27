@@ -11,7 +11,8 @@
     "request": "^2.81.0",
     "systemjs": "^0.19.41",
     "ws": "^2.0.3",
-    "zone.js": "^0.7.2"
+    "zone.js": "^0.7.2",
+    "mapbox-gl": "^0.38.0"
   },
   "devDependencies": {
     "babel-cli": "^6.18.0",
@@ -27,7 +28,7 @@
     "server": "http-server",
     "build": "babel src -d lib",
     "s": "npm run build && npm run server",
-    "wp": "webpack && npm run server"
+    "start": "webpack && npm run server"
   },
   "keywords": [
     "Babel",

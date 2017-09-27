@@ -202,7 +202,8 @@ export default class lgSelect {
     // if function called as eventListener !! `this` means the Element which trigger evt ??
     loadMoreAO () {
         // console.warn("when handling wheel evt, `this` means " + this);
-        if ((this.dropMenu.scrollHeight - this.dropMenu.scrollTop) < 211 && this.cursor < (this.options.length - this.CURSOR_RANGE)) {
+        var btmHeight = 211;
+        if ((this.dropMenu.scrollHeight - this.dropMenu.scrollTop) < btmHeight && this.cursor < (this.options.length - this.CURSOR_RANGE)) {
             // scroll to next page.
             this.cursor += this.CURSOR_RANGE;
             this.filterAO();
@@ -211,7 +212,7 @@ export default class lgSelect {
         else if (this.dropMenu.scrollTop < 1 && this.cursor > (this.CURSOR_RANGE - 1)) {
             this.cursor -= this.CURSOR_RANGE;
             this.filterAO();
-            this.dropMenu.scrollTop = this.dropMenu.scrollHeight * 0.95;
+            this.dropMenu.scrollTop = this.dropMenu.scrollHeight - (btmHeight + 4);
         }
         else {
             return;
