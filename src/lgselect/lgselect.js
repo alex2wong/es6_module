@@ -75,20 +75,16 @@ export default class lgSelect {
         this.selectBtn = selectBtn;
 
         if (selectBtn && selectInput && selectContainer && dropMenu) {
-            selectBtn.addEventListener("click", this.wrapHandler(this, this.toggleDropdown));
-            selectInput.onblur = this.wrapHandler(this,this.searchAO);
-            selectInput.onkeyup = this.wrapHandler(this, debounce(this.searchAO, 300));
-            selectContainer.addEventListener("click", this.wrapHandler(this, this.hideDropdown));
-            dropMenu.onclick = this.wrapHandler(this, this.selectAO);
-            dropMenu.onscroll = this.wrapHandler(this, debounce(this.scrollListener, 300));
+            selectBtn.addEventListener("click", this.toggleDropdown.bind(this));
+            selectInput.onblur = this.searchAO.bind(this);
+            selectInput.onkeyup = debounce(this.searchAO, 300).bind(this);
+            selectContainer.addEventListener("click", this.hideDropdown.bind(this));
+            dropMenu.onclick = this.selectAO.bind(this);
+            dropMenu.onscroll = debounce(this.scrollListener, 300).bind(this);
         } else {
             console.error("bindDom error.");
         }
         this.updateDOM();
-    }
-
-    wrapHandler(ctx, func) {
-        return func.bind(ctx);
     }
 
     /**
