@@ -1,0 +1,27 @@
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>MemoryLeak</title>
+</head>
+<body onload='init()'>
+    <h3>loaded data to memory..</h3>
+</body>
+<script>
+    function init(){
+        var gCache2 = [];
+        // use let to create newCopy in each inter..
+        for (let i = 1; i <= 15000; i++) {
+        timer = setTimeout((function(){
+            var notRef = { val: `current i value: ${i}`, junk: [...gCache2] }; // refer to internal var b...
+            if (i%1000 === 0) console.warn("when registering timer, i:" + i);
+            gCache2.push(notRef);
+            return function(){
+                // console.log(notRef.val);
+            }
+        })(), i*2 );
+        }
+    }        
+    </script>
+</html>
