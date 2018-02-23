@@ -5,23 +5,68 @@
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
     <title>MemoryLeak</title>
 </head>
-<body onload='init()'>
-    <h3>loaded data to memory..</h3>
+<body>
+    <h3>loading data to memory..</h3>
+    <div class="div1">Dom ref by JS Object</div> </br>
+    <button class="div2">destroy the growing JS Object</button>
 </body>
 <script>
-    function init(){
-        var gCache2 = [];
-        // use let to create newCopy in each inter..
-        for (let i = 1; i <= 15000; i++) {
-        timer = setTimeout((function(){
-            var notRef = { val: `current i value: ${i}`, junk: [...gCache2] }; // refer to internal var b...
-            if (i%1000 === 0) console.warn("when registering timer, i:" + i);
-            gCache2.push(notRef);
-            return function(){
-                // console.log(notRef.val);
-            }
-        })(), i*2 );
-        }
-    }        
+    // var gCache2 = [];
+    // // use let to create newCopy in each inter..
+    // for (let i = 1; i <= 11500; i++) {
+    //     timer = setTimeout((function(){
+    //         var notRef = { val: `current i value: ${i}`}; // refer to internal var b...
+    //         if (i%1000 === 0) console.warn("when registering timer, i:" + i);
+    //         return function(){
+    //             var ret = notRef;
+    //             // console.log(ret.val);
+    //         }
+    //     })(), i*2 );
+    //     gCache2.push(timer);
+    // }     
+
+    window.onload=function(){  
+  
+    function Test(Dom)  
+    {  
+        this.Dom=Dom;   // refer to DOM...
+        this.heap= {};
+        this.index = 1;
+        this.timer=null;
+        this.cache = [];
+        var that = this;
+        this.timer = window.setInterval(() => {
+            that.index += 1; 
+            that.heap = {
+                val: '_timerxxxxxbbbbxx_' + that.index,
+                junk: [...that.cache]
+            };
+            that.cache.push(that.heap);
+            if((that.index)%1000 === 0) console.log("update Test instance..t: " + that.index, "_cache elements len: "+ that.cache.length);
+        }, 2);  
+        console.warn("create Test instance..");
+    }  
+    
+    Test.prototype.destroy = function () {  
+        window.clearInterval(this.timer);  
+    }  
+    
+    div1=document.getElementsByClassName('div1')[0];    
+    myTest=new Test(div1);   
+    
+        //点击div2,销毁Test对象  
+    var div2Obj = document.getElementsByClassName('div2')[0];  
+        div2Obj.onclick = function () {       
+            console.warn('destroy Test instance...');
+            myTest.destroy();  
+            myTest = null;  
+        }     
+    }  
+
+    // setTimeout(() => {
+    //     console.warn('destroy Test instance...');
+    //     myTest.destroy();  
+    //     myTest = null;  
+    // }, 15000);
     </script>
 </html>
