@@ -26,7 +26,8 @@
     // }     
 
     window.onload=function(){  
-  
+        
+    div1=document.getElementsByClassName('div1')[0];   
     function Test(Dom)  
     {  
         this.Dom=Dom;   // refer to DOM...
@@ -35,23 +36,22 @@
         this.timer=null;
         this.cache = [];
         var that = this;
-        this.timer = window.setInterval(() => {
+        this.timer = window.setInterval(function() {
             that.index += 1; 
             that.heap = {
                 val: '_timerxxxxxbbbbxx_' + that.index,
                 junk: [...that.cache]
             };
             that.cache.push(that.heap);
-            if((that.index)%1000 === 0) console.log("update Test instance..t: " + that.index, "_cache elements len: "+ that.cache.length);
-        }, 2);  
+            if((that.index)%1000 === 0) div1.innerText = "update Test instance..t: " + that.index + "_cache elements len: "+ that.cache.length;
+        }, 1);  
         console.warn("create Test instance..");
     }  
     
     Test.prototype.destroy = function () {  
         window.clearInterval(this.timer);  
     }  
-    
-    div1=document.getElementsByClassName('div1')[0];    
+ 
     myTest=new Test(div1);   
     
         //点击div2,销毁Test对象  
